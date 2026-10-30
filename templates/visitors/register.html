@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Register a visitor · VisitraITMSO{% endblock %}
+{% block page_class %}page-narrow{% endblock %}
+
+{% block content %}
+<section class="screen-head">
+  <div>
+    <a class="back-link" href="{% url 'home' %}">
+      <svg class="icon" aria-hidden="true"><use href="#i-back"/></svg>
+      Home
+    </a>
+    <h1>Register a visitor</h1>
+    <p class="muted">Create the record once, then use visit logging for every visit.</p>
+  </div>
+  <a class="btn btn-ghost" href="{% url 'visits:kiosk' %}">
+    <svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>
+    Log a visit
+  </a>
+</section>
+
+<form method="post" class="form-layout" id="registration-form" novalidate>
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div class="alert alert-error" role="alert">
+      <svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg>
+      <div>{% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}</div>
+    </div>
+  {% endif %}
+
+  <section class="card form-section">
+    <h2 class="card-title"><span class="card-step" aria-hidden="true">1</span>Visitor type</h2>
+    <div class="segmented" role="radiogroup" aria-label="Visitor type" id="visitor-type-group">
+      {% for value, label in form.visitor_type.field.choices %}
+        <label class="segment">
+          <input
+            type="radio"
+            name="{{ form.visitor_type.html_name }}"
+            value="{{ value }}"
+            {% if form.visitor_type.value|stringformat:"s" == value %}checked{% endif %}
+          >
+          <span>{{ label }}</span>
+        </label>
+      {% endfor %}
+    </div>
+    {% for error in form.visitor_type.errors %}<p class="error">{{ error }}</p>{% endfor %}
+  </section>
+
+  <section class="card form-section">
+    <h2 class="card-title"><span class="card-step" aria-hidden="true">2</span>Identity</h2>
+    <div class="form-grid">
+      {% include "partials/field.html" with field=form.name %}
+      {% include "partials/field.html" with field=form.identifier %}
+    </div>
+    <p class="hint" id="identifier-hint">
+      Student ID for students, Employee ID for faculty. External references are generated automatically.
+    </p>
+  </section>
+
+  <section class="card form-section" data-panel="STUDENT" {% if form.visitor_type.value|stringformat:"s" != "STUDENT" %}hidden{% endif %}>
+    <h2 class="card-title"><span class="card-step" aria-hidden="true">3</span>Student details</h2>
+    <div class="form-grid">
+      {% include "partials/field.html" with field=form.student_type %}
+      {% include "partials/field.html" with field=form.course %}
+      {% include "partials/field.html" with field=form.year_level %}
+    </div>
+  </section>
+
+  <section class="card form-section" data-panel="FACULTY" {% if form.visitor_type.value|stringformat:"s" != "FACULTY" %}hidden{% endif %}>
+    <h2 class="card-title"><span class="card-step" aria-hidden="true">3</span>Faculty details</h2>
+    <div class="form-grid">
+      {% include "partials/field.html" with field=form.department %}
+    </div>
+  </section>
+
+  <section class="card form-section" data-panel="EXTERNAL" {% if form.visitor_type.value|stringformat:"s" != "EXTERNAL" %}hidden{% endif %}>
+    <h2 class="card-title"><span class="card-step" aria-hidden="true">3</span>External visitor details</h2>
+    <div class="form-grid">
+      {% include "partials/field.html" with field=form.organization %}
+      {% include "partials/field.html" with field=form.contact_number %}
+    </div>
+  </section>
+
+  <section class="card form-section">
+    <h2 class="card-title"><span class="card-step" aria-hidden="true">4</span>Data privacy</h2>
+    <label class="checkline {% if form.consent.errors %}field-invalid{% endif %}">
+      {{ form.consent }}
+      <span>{{ form.consent.label }}</span>
+    </label>
+    {% for error in form.consent.errors %}<p class="error">{{ error }}</p>{% endfor %}
+  </section>
+
+  <div class="form-actions">
+    <a class="btn btn-ghost" href="{% url 'home' %}">Cancel</a>
+    <button type="submit" class="btn btn-primary">
+      <svg class="icon" aria-hidden="true"><use href="#i-user-plus"/></svg>
+      Create visitor
+    </button>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+  <script type="module" src="{% static 'js/register.js' %}"></script>
+{% endblock %}

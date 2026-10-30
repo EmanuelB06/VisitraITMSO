@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}VisitraITMSO · ITMSO Visitor Log{% endblock %}
+{% block page_class %}page-home{% endblock %}
+
+{% block content %}
+<section class="hero card">
+  <div class="hero-decor" aria-hidden="true">
+    <span class="hero-grid"></span>
+    <span class="hero-orb hero-orb-a"></span>
+    <span class="hero-orb hero-orb-b"></span>
+  </div>
+
+  <div class="hero-logo">
+    <img src="{% static 'img/itmso_logo.png' %}" alt="ITMSO logo" width="76" height="76">
+  </div>
+
+  <p class="eyebrow hero-eyebrow">
+    <span class="eyebrow-dot" aria-hidden="true"></span>
+    Office of IT Management &amp; Systems
+  </p>
+  <h1 class="hero-title">Visitra<span>ITMSO</span></h1>
+  <p class="hero-sub">Visitor logging for St. Bridget College Batangas.</p>
+
+  <div class="hero-meta">
+    <span class="pill">
+      <svg class="icon icon-xs" aria-hidden="true"><use href="#i-clock"/></svg>
+      {{ greeting }} · {% now "l, F j" %}
+    </span>
+  </div>
+
+  <ul class="hero-chips" aria-label="What you can do here">
+    <li>
+      <svg class="icon icon-xs" aria-hidden="true"><use href="#i-check"/></svg>
+      Time in / time out
+    </li>
+    <li>
+      <svg class="icon icon-xs" aria-hidden="true"><use href="#i-user"/></svg>
+      Visitor records
+    </li>
+    <li>
+      <svg class="icon icon-xs" aria-hidden="true"><use href="#i-download"/></svg>
+      CSV · PDF · XLSX
+    </li>
+  </ul>
+</section>
+
+<section class="quick-access" aria-labelledby="quick-access-title">
+  <div class="section-label">
+    <span id="quick-access-title">Quick access</span>
+  </div>
+
+  {% if user.is_authenticated %}
+    <div class="action-grid">
+      <a class="action-card" href="{% url 'visits:kiosk' %}">
+        <span class="action-icon action-icon-green">
+          <svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>
+        </span>
+        <span class="action-body">
+          <strong>Log a visit</strong>
+          <small>Time in / time out logging</small>
+        </span>
+        <svg class="icon action-arrow" aria-hidden="true"><use href="#i-arrow-right"/></svg>
+      </a>
+
+      <a class="action-card" href="{% url 'visitors:register' %}">
+        <span class="action-icon action-icon-blue">
+          <svg class="icon" aria-hidden="true"><use href="#i-user-plus"/></svg>
+        </span>
+        <span class="action-body">
+          <strong>Register a visitor</strong>
+          <small>Student, faculty, or external visitor</small>
+        </span>
+        <svg class="icon action-arrow" aria-hidden="true"><use href="#i-arrow-right"/></svg>
+      </a>
+
+      <a class="action-card" href="{% url 'reports:dashboard' %}">
+        <span class="action-icon action-icon-amber">
+          <svg class="icon" aria-hidden="true"><use href="#i-dashboard"/></svg>
+        </span>
+        <span class="action-body">
+          <strong>Admin dashboard</strong>
+          <small>Records, filters, and exports</small>
+        </span>
+        <svg class="icon action-arrow" aria-hidden="true"><use href="#i-arrow-right"/></svg>
+      </a>
+    </div>
+  {% else %}
+    <div class="action-grid action-grid-single">
+      <a class="action-card action-card-single" href="{% url 'accounts:login' %}">
+        <span class="action-icon action-icon-blue">
+          <svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg>
+        </span>
+        <span class="action-body">
+          <strong>Sign in</strong>
+          <small>Front desk operators and ITMSO administrators</small>
+        </span>
+        <svg class="icon action-arrow" aria-hidden="true"><use href="#i-arrow-right"/></svg>
+      </a>
+    </div>
+    <p class="hint home-hint">Visitor registration and visit logging are performed by authorized staff accounts.</p>
+  {% endif %}
+</section>
+
+<section class="info-strip">
+  <div class="info-strip-brand">
+    <span class="info-strip-mark" aria-hidden="true">
+      <svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg>
+    </span>
+    <div class="info-strip-text">
+      <strong>St. Bridget College Batangas</strong>
+      <span>Office of IT Management &amp; Systems · {{ current_year }}</span>
+    </div>
+  </div>
+  <span class="version-pill">v2.0 web</span>
+</section>
+{% endblock %}

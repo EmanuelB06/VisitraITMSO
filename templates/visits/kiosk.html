@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Log a visit · VisitraITMSO{% endblock %}
+{% block body_class %}kiosk-body{% endblock %}
+{% block page_class %}page-wide{% endblock %}
+
+{% block content %}
+<section class="screen-head">
+  <div>
+    <p class="eyebrow">Visit logging</p>
+    <h1>Time in / time out</h1>
+    <p class="muted">Student · Faculty · External visitor</p>
+  </div>
+  <div class="head-actions">
+    <a class="btn btn-ghost" href="{% url 'visitors:register' %}">
+      <svg class="icon" aria-hidden="true"><use href="#i-user-plus"/></svg>
+      New visitor
+    </a>
+    <a class="btn btn-ghost" href="{% url 'reports:dashboard' %}">
+      <svg class="icon" aria-hidden="true"><use href="#i-dashboard"/></svg>
+      Dashboard
+    </a>
+  </div>
+</section>
+
+<noscript>
+  <div class="alert alert-warning">JavaScript is required for visitor lookup on this screen.</div>
+</noscript>
+
+<div class="kiosk-layout">
+  <section class="card kiosk-card" aria-labelledby="kiosk-title">
+    <div class="kiosk-head">
+      <div>
+        <h2 id="kiosk-title">Visitor lookup</h2>
+        <p class="hint">Find the visitor, choose a purpose, then record the visit.</p>
+      </div>
+    </div>
+
+    <div class="segmented" id="visitor-tabs" role="tablist" aria-label="Visitor type">
+      <button type="button" class="segment is-active" role="tab" aria-selected="true" data-type="STUDENT">Student</button>
+      <button type="button" class="segment" role="tab" aria-selected="false" data-type="FACULTY">Faculty</button>
+      <button type="button" class="segment" role="tab" aria-selected="false" data-type="EXTERNAL">External</button>
+    </div>
+
+    <div class="field">
+      <label for="visitor-search" id="lookup-label">Student ID</label>
+      <div class="search-wrap">
+        <svg class="icon search-icon" aria-hidden="true"><use href="#i-search"/></svg>
+        <input
+          id="visitor-search"
+          class="input search-input"
+          type="search"
+          autocomplete="off"
+          placeholder="Type a student ID or name…"
+          aria-autocomplete="list"
+          aria-controls="suggestions"
+          aria-expanded="false"
+          role="combobox"
+        >
+        <button type="button" class="icon-btn" id="clear-visitor" aria-label="Clear visitor" hidden>
+          <svg class="icon" aria-hidden="true"><use href="#i-close"/></svg>
+        </button>
+      </div>
+      <div class="suggestions" id="suggestions" role="listbox" aria-label="Matching visitors" hidden></div>
+      <p class="hint" id="lookup-hint">Start typing to search registered students.</p>
+    </div>
+
+    <div class="person-card" id="matched-visitor" hidden>
+      <span class="person-avatar" id="matched-initial">?</span>
+      <div class="person-body">
+        <strong id="matched-name"></strong>
+        <span id="matched-detail"></span>
+        <small id="matched-identifier"></small>
+      </div>
+      <span class="badge badge-blue" id="matched-type"></span>
+    </div>
+
+    <div class="session-banner" id="active-session" hidden>
+      <span class="session-icon"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg></span>
+      <div class="session-body">
+        <strong>Session active</strong>
+        <span id="session-purpose"></span>
+        <small id="session-time"></small>
+      </div>
+      <span class="badge badge-green">Active</span>
+    </div>
+
+    <div class="field">
+      <label for="purpose-select">Visit purpose</label>
+      <select id="purpose-select" class="select">
+        <option value="">Select a purpose…</option>
+        {% for purpose in purposes %}
+          <option
+            value="{{ purpose.pk }}"
+            data-requires-specification="{{ purpose.requires_specification|yesno:'true,false' }}"
+          >{{ purpose.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field" id="custom-purpose-field" hidden>
+      <label for="custom-purpose">Specify concern</label>
+      <input id="custom-purpose" class="input" type="text" maxlength="200" placeholder="Describe the concern">
+    </div>
+
+    <div class="kiosk-actions">
+      <button type="button" class="btn btn-success btn-block" id="time-in-btn" disabled>
+        <svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>
+        Time in
+      </button>
+      <button type="button" class="btn btn-danger btn-block" id="time-out-btn" hidden>
+        <svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>
+        Time out
+      </button>
+    </div>
+    <p class="hint center" id="kiosk-hint">Search for a visitor to begin.</p>
+  </section>
+
+  <aside class="card card-muted kiosk-side" aria-labelledby="inside-title">
+    <div class="side-head">
+      <div class="side-title">
+        <h2 id="inside-title">Inside now</h2>
+        <span class="badge badge-green" id="active-count" hidden></span>
+      </div>
+      <button type="button" class="icon-btn" id="refresh-active" aria-label="Refresh list">
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg>
+      </button>
+    </div>
+    <div class="active-list" id="active-list">
+      <p class="empty-state small">Loading…</p>
+    </div>
+  </aside>
+</div>
+
+<div class="overlay" id="success-overlay" hidden>
+  <div class="overlay-card" role="status" aria-live="polite">
+    <span class="overlay-icon overlay-icon-green">
+      <svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>
+    </span>
+    <h2 id="success-title">Time in recorded</h2>
+    <p id="success-detail" class="muted"></p>
+  </div>
+</div>
+
+{{ bootstrap|json_script:"kiosk-bootstrap" }}
+{% endblock %}
+
+{% block scripts %}
+  <script type="module" src="{% static 'js/kiosk.js' %}"></script>
+{% endblock %}

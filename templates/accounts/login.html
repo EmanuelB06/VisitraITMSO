@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Sign in · VisitraITMSO{% endblock %}
+{% block page_class %}page-auth{% endblock %}
+
+{% block content %}
+<section class="auth-card card">
+  <a class="back-link" href="{% url 'home' %}">
+    <svg class="icon" aria-hidden="true"><use href="#i-back"/></svg>
+    Back to home
+  </a>
+
+  <div class="auth-brand">
+    <span class="auth-mark">
+      <img src="{% static 'img/itmso_logo.png' %}" alt="ITMSO logo" width="48" height="48">
+    </span>
+    <div>
+      <strong>VISITRA · ITMSO</strong>
+      <small>Staff and administrator access</small>
+    </div>
+  </div>
+
+  <h1>Sign in</h1>
+  <p class="muted">Use your ITMSO account. Administrators open the visit dashboard; front-desk staff open the kiosk.</p>
+
+  {% if form.non_field_errors %}
+    <div class="alert alert-error" role="alert">
+      <svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg>
+      <div>{% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}</div>
+    </div>
+  {% endif %}
+
+  <form method="post" class="stack" novalidate>
+    {% csrf_token %}
+    {% include "partials/field.html" with field=form.username %}
+    {% include "partials/field.html" with field=form.password %}
+    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+    <button type="submit" class="btn btn-primary btn-block">
+      <svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg>
+      Sign in
+    </button>
+  </form>
+
+  <p class="auth-note">
+    Accounts are issued by the ITMSO administrator. Visitor records never contain
+    login credentials.
+  </p>
+</section>
+{% endblock %}

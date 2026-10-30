@@ -1,0 +1,123 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <script>document.documentElement.classList.add("js");</script>
+  <title>{% block title %}VisitraITMSO{% endblock %}</title>
+  <meta name="description" content="Visitor logging for the Office of IT Management &amp; Systems, St. Bridget College Batangas.">
+  <link rel="icon" href="{% static 'img/itmso_logo.png' %}">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  {% block head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+  {% include "partials/icons.html" %}
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="topbar">
+    {% with match=request.resolver_match %}
+    <div class="topbar-inner">
+      <a class="brand" href="{% url 'home' %}">
+        <span class="brand-mark">
+          <img src="{% static 'img/itmso_logo.png' %}" alt="" class="brand-logo" width="40" height="40">
+        </span>
+        <span class="brand-text"><strong>Visitra</strong><small>ITMSO</small></span>
+      </a>
+
+      <button type="button" class="nav-toggle" aria-expanded="false" aria-controls="primary-nav" aria-label="Toggle navigation">
+        <svg class="icon nav-toggle-open" aria-hidden="true"><use href="#i-menu"/></svg>
+        <svg class="icon nav-toggle-close" aria-hidden="true"><use href="#i-close"/></svg>
+      </button>
+
+      <nav class="nav" id="primary-nav" aria-label="Primary">
+        <a class="nav-link{% if not match.namespace and match.url_name == 'home' %} is-active{% endif %}"
+           href="{% url 'home' %}"{% if not match.namespace and match.url_name == 'home' %} aria-current="page"{% endif %}>
+          <svg class="icon" aria-hidden="true"><use href="#i-home"/></svg>
+          <span>Home</span>
+        </a>
+        {% if user.is_authenticated %}
+          <a class="nav-link{% if match.namespace == 'visits' %} is-active{% endif %}"
+             href="{% url 'visits:kiosk' %}"{% if match.namespace == 'visits' %} aria-current="page"{% endif %}>
+            <svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>
+            <span>Log visit</span>
+          </a>
+          <a class="nav-link{% if match.namespace == 'visitors' %} is-active{% endif %}"
+             href="{% url 'visitors:register' %}"{% if match.namespace == 'visitors' %} aria-current="page"{% endif %}>
+            <svg class="icon" aria-hidden="true"><use href="#i-user-plus"/></svg>
+            <span>Register</span>
+          </a>
+          <a class="nav-link{% if match.namespace == 'reports' %} is-active{% endif %}"
+             href="{% url 'reports:dashboard' %}"{% if match.namespace == 'reports' %} aria-current="page"{% endif %}>
+            <svg class="icon" aria-hidden="true"><use href="#i-dashboard"/></svg>
+            <span>Dashboard</span>
+          </a>
+          {% if user.is_staff and user.is_admin_role %}
+            <a class="nav-link{% if match.namespace == 'admin' %} is-active{% endif %}"
+               href="{% url 'admin:index' %}"{% if match.namespace == 'admin' %} aria-current="page"{% endif %}>
+              <svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg>
+              <span>Admin</span>
+            </a>
+          {% endif %}
+
+          <span class="nav-divider" aria-hidden="true"></span>
+
+          <span class="nav-user" title="{{ user.display_name }}">
+            <span class="avatar">{{ user.display_name|slice:":1"|upper }}</span>
+            <span class="nav-user-text">
+              <strong class="nav-user-name">{{ user.display_name }}</strong>
+              <small>{{ user.get_role_display }}</small>
+            </span>
+          </span>
+          <form method="post" action="{% url 'accounts:logout' %}" class="inline-form nav-form">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-ghost btn-sm nav-signout">
+              <svg class="icon" aria-hidden="true"><use href="#i-logout"/></svg>
+              Sign out
+            </button>
+          </form>
+        {% else %}
+          <a class="btn btn-primary btn-sm nav-cta" href="{% url 'accounts:login' %}">
+            <svg class="icon" aria-hidden="true"><use href="#i-user"/></svg>
+            Sign in
+          </a>
+        {% endif %}
+      </nav>
+    </div>
+    {% endwith %}
+  </header>
+
+  <main id="main" class="page {% block page_class %}{% endblock %}">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <div class="footer-brand">
+        <img src="{% static 'img/itmso_logo.png' %}" alt="" width="32" height="32">
+        <div class="footer-brand-text">
+          <strong>VisitraITMSO</strong>
+          <span>St. Bridget College Batangas</span>
+        </div>
+      </div>
+      <div class="footer-meta">
+        <span>Office of IT Management &amp; Systems</span>
+        <span>&copy; {% now "Y" %} · v2.0 web</span>
+      </div>
+    </div>
+  </footer>
+
+  <div class="toast-stack" id="toast-stack" aria-live="polite" aria-atomic="false">
+    {% for message in messages %}
+      <div class="toast toast-{{ message.tags }}" data-autohide>
+        <svg class="icon" aria-hidden="true"><use href="#i-info"/></svg>
+        <span>{{ message }}</span>
+      </div>
+    {% endfor %}
+  </div>
+
+  <script type="module" src="{% static 'js/app.js' %}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

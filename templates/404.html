@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block title %}Page not found · VisitraITMSO{% endblock %}
+{% block page_class %}page-auth{% endblock %}
+
+{% block content %}
+<section class="auth-card card empty-state">
+  <span class="error-code" aria-hidden="true">404</span>
+  <h1>Page not found</h1>
+  <p class="muted">The page you followed does not exist or has moved.</p>
+  <a class="btn btn-primary" href="{% url 'home' %}">Back to home</a>
+</section>
+{% endblock %}

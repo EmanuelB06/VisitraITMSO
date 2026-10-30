@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Dashboard · VisitraITMSO{% endblock %}
+{% block page_class %}page-dashboard{% endblock %}
+
+{% block content %}
+<section class="screen-head">
+  <div>
+    <p class="eyebrow">Admin dashboard</p>
+    <h1>Visit records</h1>
+    <p class="muted">{% now "l, F j, Y" %} · {% now "h:i A" %}</p>
+  </div>
+  <div class="head-actions">
+    <a class="btn btn-ghost" href="{% url 'visits:kiosk' %}">
+      <svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>
+      Open kiosk
+    </a>
+  </div>
+</section>
+
+<section class="stats" aria-label="Visit summary">
+  <div class="stat card stat-card-blue">
+    <div class="stat-top">
+      <span class="stat-label">Total</span>
+      <span class="stat-icon" aria-hidden="true">
+        <svg class="icon"><use href="#i-dashboard"/></svg>
+      </span>
+    </div>
+    <strong class="stat-value stat-blue">{{ summary.total }}</strong>
+    <span class="stat-note">records</span>
+  </div>
+  <div class="stat card stat-card-green">
+    <div class="stat-top">
+      <span class="stat-label">Active</span>
+      <span class="stat-icon" aria-hidden="true">
+        <svg class="icon"><use href="#i-clock"/></svg>
+      </span>
+    </div>
+    <strong class="stat-value stat-green">{{ summary.active }}</strong>
+    <span class="stat-note">currently inside</span>
+  </div>
+  <div class="stat card stat-card-amber">
+    <div class="stat-top">
+      <span class="stat-label">Completed</span>
+      <span class="stat-icon" aria-hidden="true">
+        <svg class="icon"><use href="#i-check"/></svg>
+      </span>
+    </div>
+    <strong class="stat-value stat-amber">{{ summary.done }}</strong>
+    <span class="stat-note">timed out</span>
+  </div>
+</section>
+
+<form method="get" class="card filters" data-filter-form>
+  <div class="filters-head">
+    <span class="filters-title">
+      <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
+      Filter records
+    </span>
+    <span class="filters-note">Changes apply automatically</span>
+  </div>
+  <div class="filter-grid">
+    <div class="field field-search">
+      <label for="filter-search">Search</label>
+      <div class="search-wrap">
+        <svg class="icon search-icon" aria-hidden="true"><use href="#i-search"/></svg>
+        <input
+          id="filter-search"
+          type="search"
+          name="search"
+          class="input search-input"
+          value="{{ filters.search }}"
+          placeholder="Name, ID, or purpose…"
+        >
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="filter-from">From</label>
+      <input
+        id="filter-from"
+        type="date"
+        name="date_from"
+        class="input"
+        value="{% if filters.date_from %}{{ filters.date_from|date:'Y-m-d' }}{% endif %}"
+      >
+    </div>
+
+    <div class="field">
+      <label for="filter-to">To</label>
+      <input
+        id="filter-to"
+        type="date"
+        name="date_to"
+        class="input"
+        value="{% if filters.date_to %}{{ filters.date_to|date:'Y-m-d' }}{% endif %}"
+      >
+    </div>
+
+    <div class="field">
+      <label for="filter-status">Status</label>
+      <select id="filter-status" name="status" class="select">
+        {% for value, label in status_choices %}
+          <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="filter-type">Visitor type</label>
+      <select id="filter-type" name="type" class="select">
+        {% for value, label in type_choices %}
+          <option value="{{ value }}" {% if filters.visitor_type == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="filter-actions">
+      <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+      <a class="btn btn-ghost btn-sm" href="{% url 'reports:dashboard' %}">Reset</a>
+    </div>
+  </div>
+</form>
+
+<div class="records-head">
+  <h2>
+    {{ filtered_total }} record{{ filtered_total|pluralize }}{% if has_filters %} <span class="muted">(filtered)</span>{% endif %}
+  </h2>
+
+  {% if user.is_admin_role %}
+    <details class="export-menu">
+      <summary class="btn btn-primary btn-sm">
+        <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>
+        Export
+        <svg class="icon icon-xs" aria-hidden="true"><use href="#i-chevron-down"/></svg>
+      </summary>
+      <div class="export-links">
+        <a href="?{% if export_query %}{{ export_query }}&{% endif %}format=csv">
+          <strong>CSV</strong><span>Spreadsheet-friendly text</span>
+        </a>
+        <a href="?{% if export_query %}{{ export_query }}&{% endif %}format=pdf">
+          <strong>PDF</strong><span>Printable report</span>
+        </a>
+        <a href="?{% if export_query %}{{ export_query }}&{% endif %}format=xlsx">
+          <strong>Excel</strong><span>Formatted workbook</span>
+        </a>
+      </div>
+    </details>
+  {% endif %}
+</div>
+
+<section class="record-list" aria-label="Visit records">
+  {% for visit in page_obj %}
+    <article class="card record {% if visit.is_active %}record-active{% else %}record-done{% endif %}">
+      <div class="record-head">
+        <div class="record-person">
+          <span class="avatar">{{ visit.visitor.name|slice:":1"|upper }}</span>
+          <div>
+            <strong>{{ visit.visitor.name }}</strong>
+            <small>ID: {{ visit.visitor.identifier }} · {{ visit.visitor.type_label }}</small>
+          </div>
+        </div>
+        <div class="record-actions">
+          <span class="badge {% if visit.is_active %}badge-green{% else %}badge-amber{% endif %}">
+            <span class="dot" aria-hidden="true"></span>
+            {{ visit.status_label }}
+          </span>
+          {% if user.is_admin_role %}
+            <form
+              method="post"
+              action="{% url 'reports:delete' visit.pk %}"
+              class="inline-form"
+              data-confirm="Delete the record for {{ visit.visitor.name }}? This cannot be undone from the app."
+            >
+              {% csrf_token %}
+              <input type="hidden" name="query" value="{{ export_query }}">
+              <button type="submit" class="icon-btn danger" aria-label="Delete record for {{ visit.visitor.name }}">
+                <svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg>
+              </button>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+
+      <p class="record-purpose">{{ visit.display_purpose }}</p>
+
+      <div class="record-times">
+        <span><small>Time in</small><strong>{{ visit.time_in|date:"M d, Y h:i A" }}</strong></span>
+        <span><small>Time out</small><strong>{% if visit.time_out %}{{ visit.time_out|date:"M d, Y h:i A" }}{% else %}—{% endif %}</strong></span>
+        <span><small>Duration</small><strong>{{ visit.duration_label }}</strong></span>
+      </div>
+    </article>
+  {% empty %}
+    <div class="card empty-state">
+      <svg class="icon empty-icon" aria-hidden="true"><use href="#i-search"/></svg>
+      <h2>No records found</h2>
+      <p class="muted">{% if has_filters %}Try clearing some filters.{% else %}Visits will appear here once someone times in.{% endif %}</p>
+      {% if has_filters %}<a class="btn btn-ghost btn-sm" href="{% url 'reports:dashboard' %}">Clear filters</a>{% endif %}
+    </div>
+  {% endfor %}
+</section>
+
+{% if page_obj.paginator.num_pages > 1 %}
+  <nav class="pagination" aria-label="Record pages">
+    {% if page_obj.has_previous %}
+      <a class="btn btn-ghost btn-sm" href="{% querystring page=page_obj.previous_page_number %}">Previous</a>
+    {% else %}
+      <span class="btn btn-ghost btn-sm is-disabled" aria-disabled="true">Previous</span>
+    {% endif %}
+    <span class="pagination-info">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+      <a class="btn btn-ghost btn-sm" href="{% querystring page=page_obj.next_page_number %}">Next</a>
+    {% else %}
+      <span class="btn btn-ghost btn-sm is-disabled" aria-disabled="true">Next</span>
+    {% endif %}
+  </nav>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+  <script type="module" src="{% static 'js/dashboard.js' %}"></script>
+{% endblock %}

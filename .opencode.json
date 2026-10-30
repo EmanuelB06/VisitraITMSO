@@ -1,0 +1,5 @@
+{
+  "model": "google/gemini-3.8-flash",
+  "provider": "google",
+  "stream": true
+}

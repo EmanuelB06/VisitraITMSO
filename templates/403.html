@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block title %}Access denied · VisitraITMSO{% endblock %}
+{% block page_class %}page-auth{% endblock %}
+
+{% block content %}
+<section class="auth-card card empty-state">
+  <span class="error-code" aria-hidden="true">403</span>
+  <h1>Access denied</h1>
+  <p class="muted">Your account does not have permission for that action. Ask the ITMSO administrator if you need access.</p>
+  <a class="btn btn-primary" href="{% url 'home' %}">Back to home</a>
+</section>
+{% endblock %}
