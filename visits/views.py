@@ -9,8 +9,8 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
 from django.views.generic import TemplateView
 
-from accounts.mixins import StaffRequiredMixin
-from core.api import api_login_required, first_form_error, json_error, parse_json_body
+from accounts.mixins import StaffRequiredMixin, api_staff_required
+from core.api import first_form_error, json_error, parse_json_body
 from core.exceptions import DomainError
 from visitors.selectors import VisitorSelector
 from visitors.serializers import visitor_payload
@@ -52,7 +52,7 @@ class KioskView(StaffRequiredMixin, TemplateView):
         return context
 
 
-@api_login_required
+@api_staff_required
 @require_POST
 def time_in(request):
     payload = parse_json_body(request)
@@ -84,7 +84,7 @@ def time_in(request):
     return JsonResponse({"visit": visit_payload(visit)}, status=201)
 
 
-@api_login_required
+@api_staff_required
 @require_POST
 def time_out(request, pk):
     visit = VisitSelector.get_visible(pk)
@@ -97,7 +97,7 @@ def time_out(request, pk):
     return JsonResponse({"visit": visit_payload(visit)})
 
 
-@api_login_required
+@api_staff_required
 def active_visits(request):
     """Used by the kiosk to show who is currently inside (optional refresh)."""
     visits = VisitSelector.active(limit=50)

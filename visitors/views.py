@@ -7,8 +7,7 @@ from django.urls import reverse, reverse_lazy
 from django.views.decorators.http import require_GET
 from django.views.generic import FormView
 
-from accounts.mixins import StaffRequiredMixin
-from core.api import api_login_required
+from accounts.mixins import StaffRequiredMixin, api_staff_required
 
 from .exceptions import DomainError
 from .forms import VisitorRegistrationForm
@@ -39,7 +38,7 @@ class RegisterVisitorView(StaffRequiredMixin, FormView):
         return redirect(f"{kiosk_url}?visitor={visitor.pk}")
 
 
-@api_login_required
+@api_staff_required
 @require_GET
 def visitor_lookup(request):
     term = request.GET.get("q", "")

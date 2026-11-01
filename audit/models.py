@@ -17,6 +17,7 @@ class ActivityLog(UUIDModel, TimeStampedModel):
         TIME_OUT = "TIME_OUT", "Time out"
         VISIT_DELETED = "VISIT_DELETED", "Visit deleted"
         EXPORT = "EXPORT", "Report exported"
+        ACCESS_CHANGED = "ACCESS_CHANGED", "Access changed"
 
     actor = models.ForeignKey(
         settings.AUTH_USER_MODEL,

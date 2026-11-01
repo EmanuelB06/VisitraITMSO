@@ -239,11 +239,22 @@ class VisitRepository:
 
         return records
 
-    def summary(self) -> dict:
+    def summary(self, *, date_from: date | None = None, date_to: date | None = None) -> dict:
         docs = [
             doc
             for doc in self.store.query(self.collection)
             if not doc.get("deleted_at")
         ]
+
+        if date_from or date_to:
+            start = date_from.isoformat() if date_from else ""
+            end = date_to.isoformat() if date_to else ""
+            docs = [
+                doc
+                for doc in docs
+                if (not start or str(doc.get("visit_date", "")) >= start)
+                and (not end or str(doc.get("visit_date", "")) <= end)
+            ]
+
         active = sum(1 for doc in docs if not doc.get("time_out"))
         return {"total": len(docs), "active": active, "done": len(docs) - active}

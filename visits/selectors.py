@@ -122,14 +122,18 @@ class VisitSelector:
         )
 
     @staticmethod
-    def summary() -> dict:
+    def summary(*, date_from: date | None = None, date_to: date | None = None) -> dict:
         if is_enabled():
-            return VisitRepository().summary()
+            return VisitRepository().summary(date_from=date_from, date_to=date_to)
 
-        aggregates = Visit.objects.visible().aggregate(
-            total=Count("id"),
-            active=Count("id", filter=Q(time_out__isnull=True)),
-            done=Count("id", filter=Q(time_out__isnull=False)),
+        aggregates = (
+            Visit.objects.visible()
+            .for_date_range(date_from, date_to)
+            .aggregate(
+                total=Count("id"),
+                active=Count("id", filter=Q(time_out__isnull=True)),
+                done=Count("id", filter=Q(time_out__isnull=False)),
+            )
         )
         return {
             "total": aggregates["total"] or 0,

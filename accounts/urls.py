@@ -5,6 +5,7 @@ from django.contrib.auth import views as auth_views
 from django.urls import path, reverse
 
 from .forms import LoginForm
+from .permissions import is_admin
 from .throttle import clear_failures, register_failure
 
 app_name = "accounts"
@@ -31,7 +32,7 @@ class VisitraLoginView(auth_views.LoginView):
         An explicit ``?next=`` still wins because ``get_success_url()`` checks
         it first; this only decides where a plain sign-in lands.
         """
-        if self.request.user.is_admin_role:
+        if is_admin(self.request.user):
             return reverse("reports:dashboard")
         return reverse("visits:kiosk")
 

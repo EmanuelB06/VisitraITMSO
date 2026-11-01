@@ -7,6 +7,7 @@ from django.db import IntegrityError
 from django.urls import reverse
 
 from accounts.admin import UserAdmin
+from accounts.permissions import capabilities_for
 from audit.models import ActivityLog
 
 User = get_user_model()
@@ -123,3 +124,53 @@ def test_user_admin_grants_staff_status_to_an_admin_role():
     user.refresh_from_db()
 
     assert user.is_staff is True
+
+
+@pytest.mark.django_db
+def test_demoting_an_admin_revokes_staff_status_and_is_audited():
+    user = User.objects.create_user(
+        username="demote",
+        email="demote@example.com",
+        password="Admin@12345",
+        role=User.Role.ADMIN,
+        is_staff=True,
+    )
+    model_admin = UserAdmin(User, django_admin.site)
+
+    user.role = User.Role.STAFF
+    model_admin.save_model(None, user, None, True)
+    user.refresh_from_db()
+
+    assert user.is_staff is False
+    entry = ActivityLog.objects.get(
+        action=ActivityLog.Action.ACCESS_CHANGED,
+        entity_id=str(user.pk),
+    )
+    assert entry.metadata["previous"]["role"] == User.Role.ADMIN
+    assert entry.metadata["current"]["role"] == User.Role.STAFF
+    assert entry.metadata["current"]["is_staff"] is False
+
+
+@pytest.mark.django_db
+def test_capabilities_split_staff_and_admin(staff_user, admin_user):
+    staff = capabilities_for(staff_user)
+    admin = capabilities_for(admin_user)
+
+    assert staff["staff"] is True
+    assert staff["admin"] is False
+    assert staff["view_full_history"] is False
+    assert staff["export_reports"] is False
+    assert staff["delete_visits"] is False
+    assert staff["manage_purposes"] is False
+    assert staff["manage_users"] is False
+    assert staff["view_audit"] is False
+    assert staff["use_django_admin"] is False
+
+    assert admin["admin"] is True
+    assert admin["view_full_history"] is True
+    assert admin["export_reports"] is True
+    assert admin["delete_visits"] is True
+    assert admin["manage_purposes"] is True
+    assert admin["manage_users"] is True
+    assert admin["view_audit"] is True
+    assert admin["use_django_admin"] is True

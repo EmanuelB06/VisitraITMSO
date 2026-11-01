@@ -7,9 +7,15 @@
 {% block content %}
 <section class="screen-head">
   <div>
-    <p class="eyebrow">Admin dashboard</p>
+    <p class="eyebrow">{% if full_history %}Admin dashboard{% else %}Front desk · today{% endif %}</p>
     <h1>Visit records</h1>
-    <p class="muted">{% now "l, F j, Y" %} · {% now "h:i A" %}</p>
+    <p class="muted">
+      {% if full_history %}
+        {% now "l, F j, Y" %} · {% now "h:i A" %}
+      {% else %}
+        {{ today|date:"l, F j, Y" }} · today's visits only
+      {% endif %}
+    </p>
   </div>
   <div class="head-actions">
     <a class="btn btn-ghost" href="{% url 'visits:kiosk' %}">
@@ -76,27 +82,29 @@
       </div>
     </div>
 
-    <div class="field">
-      <label for="filter-from">From</label>
-      <input
-        id="filter-from"
-        type="date"
-        name="date_from"
-        class="input"
-        value="{% if filters.date_from %}{{ filters.date_from|date:'Y-m-d' }}{% endif %}"
-      >
-    </div>
+    {% if full_history %}
+      <div class="field">
+        <label for="filter-from">From</label>
+        <input
+          id="filter-from"
+          type="date"
+          name="date_from"
+          class="input"
+          value="{% if filters.date_from %}{{ filters.date_from|date:'Y-m-d' }}{% endif %}"
+        >
+      </div>
 
-    <div class="field">
-      <label for="filter-to">To</label>
-      <input
-        id="filter-to"
-        type="date"
-        name="date_to"
-        class="input"
-        value="{% if filters.date_to %}{{ filters.date_to|date:'Y-m-d' }}{% endif %}"
-      >
-    </div>
+      <div class="field">
+        <label for="filter-to">To</label>
+        <input
+          id="filter-to"
+          type="date"
+          name="date_to"
+          class="input"
+          value="{% if filters.date_to %}{{ filters.date_to|date:'Y-m-d' }}{% endif %}"
+        >
+      </div>
+    {% endif %}
 
     <div class="field">
       <label for="filter-status">Status</label>
@@ -128,7 +136,7 @@
     {{ filtered_total }} record{{ filtered_total|pluralize }}{% if has_filters %} <span class="muted">(filtered)</span>{% endif %}
   </h2>
 
-  {% if user.is_admin_role %}
+  {% if caps.export_reports %}
     <details class="export-menu">
       <summary class="btn btn-primary btn-sm">
         <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>
@@ -166,7 +174,7 @@
             <span class="dot" aria-hidden="true"></span>
             {{ visit.status_label }}
           </span>
-          {% if user.is_admin_role %}
+          {% if caps.delete_visits %}
             <form
               method="post"
               action="{% url 'reports:delete' visit.pk %}"

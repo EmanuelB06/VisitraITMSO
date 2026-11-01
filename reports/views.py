@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 import io
+from dataclasses import replace
 
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.http import FileResponse, Http404
 from django.shortcuts import redirect
 from django.urls import reverse
+from django.utils import timezone
 from django.views import View
 from django.views.generic import TemplateView
 
 from accounts.mixins import AdminRequiredMixin, StaffRequiredMixin
+from accounts.permissions import can_view_full_history
 from audit.services import record as record_activity
 from visits.selectors import VisitFilter, VisitSelector
 from visits.services import VisitService
@@ -28,7 +31,26 @@ class DashboardView(StaffRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        filters = VisitFilter.from_query(self.request.GET)
+        requested = VisitFilter.from_query(self.request.GET)
+        full_history = can_view_full_history(self.request.user)
+
+        if full_history:
+            filters = requested
+            # The admin summary stays global, matching the historical view.
+            summary = VisitSelector.summary()
+            has_filters = requested.is_filtered
+        else:
+            # Front-desk staff see the current local day only. Date filters are
+            # ignored rather than trusted, so history cannot be requested by URL.
+            today = timezone.localdate()
+            filters = replace(requested, date_from=today, date_to=today)
+            summary = VisitSelector.summary(date_from=today, date_to=today)
+            has_filters = bool(
+                requested.search
+                or requested.status != "ALL"
+                or requested.visitor_type != "ALL"
+            )
+
         queryset = VisitSelector.apply(filters)
         paginator = Paginator(queryset, PAGE_SIZE)
         page_obj = paginator.get_page(self.request.GET.get("page"))
@@ -37,11 +59,13 @@ class DashboardView(StaffRequiredMixin, TemplateView):
             filters=filters,
             page_obj=page_obj,
             filtered_total=paginator.count,
-            summary=VisitSelector.summary(),
+            summary=summary,
             status_choices=VisitFilter.STATUS_CHOICES,
             type_choices=VisitFilter.TYPE_CHOICES,
             export_query=filters.as_query(),
-            has_filters=filters.is_filtered,
+            has_filters=has_filters,
+            full_history=full_history,
+            today=timezone.localdate(),
         )
         return context
 

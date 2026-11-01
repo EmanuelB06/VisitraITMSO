@@ -10,6 +10,8 @@ from visits.models import Visit
 from visits.services import VisitService
 from visitors.models import Visitor
 
+from .conftest import FixedClock, manila
+
 
 @pytest.fixture
 def visit(db, student, purpose):
@@ -379,8 +381,56 @@ def test_dashboard_filters(client, staff_user, visit, faculty, purpose):
     assert b"Dr. Juan Dela Cruz" in response.content
     assert b"Maria Santos" not in response.content
 
+
+@pytest.mark.django_db
+def test_staff_dashboard_is_limited_to_today(client, staff_user, admin_user, student, faculty, purpose):
+    VisitService(clock=FixedClock(manila(2026, 3, 9, 9, 0))).time_in(
+        visitor=student,
+        purpose=purpose,
+    )
+    VisitService().time_in(visitor=faculty, purpose=purpose)
+
+    client.force_login(staff_user)
+    response = client.get(reverse("reports:dashboard"))
+    assert b"Dr. Juan Dela Cruz" in response.content
+    assert b"Maria Santos" not in response.content
+
+    # Staff cannot request history through the date filters either.
+    response = client.get(reverse("reports:dashboard"), {"date_from": "2000-01-01"})
+    assert b"Dr. Juan Dela Cruz" in response.content
+    assert b"Maria Santos" not in response.content
+
+    client.force_login(admin_user)
+    response = client.get(reverse("reports:dashboard"))
+    assert b"Dr. Juan Dela Cruz" in response.content
+    assert b"Maria Santos" in response.content
+
+
+@pytest.mark.django_db
+def test_admin_can_filter_history_by_date(client, admin_user, visit):
+    client.force_login(admin_user)
+
     response = client.get(reverse("reports:dashboard"), {"date_from": "2999-01-01"})
+
     assert b"No records found" in response.content
+
+
+@pytest.mark.django_db
+def test_inactive_staff_cannot_use_kiosk_apis(client, staff_user, student, purpose):
+    staff_user.is_active = False
+    staff_user.save(update_fields=["is_active"])
+    client.force_login(staff_user)
+
+    assert client.get(reverse("visitors:lookup"), {"q": "Maria"}).status_code == 403
+    assert client.get(reverse("visits:active")).status_code == 403
+    assert (
+        post_json(
+            client,
+            reverse("visits:time-in"),
+            {"visitor_id": str(student.pk), "purpose_id": str(purpose.pk)},
+        ).status_code
+        == 403
+    )
 
 
 @pytest.mark.django_db

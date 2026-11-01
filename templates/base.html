@@ -53,7 +53,7 @@
             <svg class="icon" aria-hidden="true"><use href="#i-dashboard"/></svg>
             <span>Dashboard</span>
           </a>
-          {% if user.is_staff and user.is_admin_role %}
+          {% if caps.use_django_admin %}
             <a class="nav-link{% if match.namespace == 'admin' %} is-active{% endif %}"
                href="{% url 'admin:index' %}"{% if match.namespace == 'admin' %} aria-current="page"{% endif %}>
               <svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg>

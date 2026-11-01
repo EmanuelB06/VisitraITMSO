@@ -5,8 +5,8 @@ Visitor logging for the **Office of IT Management & Systems (ITMSO)** of
 application.
 
 Staff use a browser-based kiosk to register visitors and record time in /
-time out. Administrators get a dashboard with counters, filters, search,
-exports, and soft-delete.
+time out, with a dashboard limited to the current day. Administrators get the
+full history with counters, filters, search, exports, and soft-delete.
 
 ---
 
@@ -17,15 +17,33 @@ exports, and soft-delete.
 - **Kiosk** with live visitor lookup, purpose selection, custom concern text,
   time in, time out, and an “Inside now” panel.
 - **Dashboard** with total / active / completed counters, search by name, ID,
-  or purpose, date range, status and visitor-type filters.
-- **Exports**: CSV, PDF (print-ready), and XLSX (formatted workbook).
-- **Roles**: staff can register, log visits, and read the dashboard; admins can
-  also export, delete records, and use Django admin.
+  or purpose, status and visitor-type filters. Staff see today only; admins can
+  also filter by date range and browse full history.
+- **Exports**: CSV, PDF (print-ready), and XLSX (formatted workbook), admin-only.
+- **Roles**: staff can register, log visits, and read today's dashboard; admins
+  can also view history, export, delete records, manage purposes/users, read the
+  audit trail, and use Django admin.
 - **Audit trail** of sign-ins, failed sign-ins, registrations, time in/out,
-  deletions, and exports.
+  deletions, exports, and access/role changes.
 - **Login protection**: case-insensitive unique usernames/emails and a
   cache-backed lockout after repeated failed attempts.
 - Dark, responsive UI with keyboard-friendly lookup and print styles.
+
+### Roles and capabilities
+
+Capabilities are defined once in `accounts/permissions.py` and exposed to
+templates as `caps`.
+
+| Capability | Staff | Admin |
+|------------|:-----:|:-----:|
+| Register visitors, lookup, time in/out | Yes | Yes |
+| Dashboard: today's records | Yes | Yes |
+| Dashboard: full history and date filters | No | Yes |
+| Export CSV / PDF / XLSX | No | Yes |
+| Soft-delete records | No | Yes |
+| Manage purposes and users | No | Yes |
+| View audit trail | No | Yes |
+| Django admin (`is_staff`) | No | Yes |
 
 ---
 
@@ -98,7 +116,7 @@ must specify a concern).
 | `/accounts/login/` | Public | Staff authentication |
 | `/visitors/register/` | Staff | Create a visitor record |
 | `/visits/` | Staff | Kiosk: lookup, time in, time out |
-| `/dashboard/` | Staff (read) | Counters, filters, records |
+| `/dashboard/` | Staff | Today's counters, filters, and records (admins see all history) |
 | `/dashboard/export/?format=csv\|pdf\|xlsx` | Admin | Download a filtered report |
 | `/dashboard/<uuid>/delete/` | Admin | Soft-delete a visit |
 | `/admin/` | Admin | Django admin (users, visitors, purposes, audit log) |
@@ -118,7 +136,7 @@ reports/         dashboard and delete views, CSV/PDF/XLSX exporters, factory
 audit/           append-only ActivityLog + Firestore audit repository
 templates/       server-rendered pages and shared partials
 static/          CSS design system, ES-module JavaScript, logo
-tests/           pytest suite (97 tests)
+tests/           pytest suite (102 tests)
 ```
 
 Requests flow in one direction:
