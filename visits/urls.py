@@ -6,6 +6,7 @@ app_name = "visits"
 
 urlpatterns = [
     path("", views.KioskView.as_view(), name="kiosk"),
+    path("api/qr/", views.qr_scan, name="qr-scan"),
     path("api/time-in/", views.time_in, name="time-in"),
     path("api/<uuid:pk>/time-out/", views.time_out, name="time-out"),
     path("api/active/", views.active_visits, name="active"),

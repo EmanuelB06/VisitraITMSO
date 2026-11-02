@@ -14,6 +14,8 @@ full history with counters, filters, search, exports, and soft-delete.
 
 - **Visitor registration** for students, faculty, and external visitors.
 - Type-aware fields and rules (student ID, employee ID, generated external reference).
+- **Reusable QR check-in**: every visitor gets a unique signed QR code, with a
+  camera-based scanner in the kiosk and a complete per-visitor visit history.
 - **Kiosk** with live visitor lookup, purpose selection, custom concern text,
   time in, time out, and an “Inside now” panel.
 - **Dashboard** with total / active / completed counters, search by name, ID,
@@ -102,9 +104,9 @@ python manage.py sync_firestore --direction=to-firestore   # SQL -> Firestore
 python manage.py sync_firestore --direction=to-sql         # Firestore -> SQL backup
 ```
 
-Visit purposes are ordinary database records: edit them at `/admin/` under
-**Visits → Purposes** (name, sort order, active flag, and whether the visitor
-must specify a concern).
+Visit purposes are ordinary database records: manage them at `/admin/purposes/`
+in the admin panel, or at `/django-admin/` under **Visits → Purposes** (name,
+sort order, active flag, and whether the visitor must specify a concern).
 
 ---
 
@@ -115,12 +117,95 @@ must specify a concern).
 | `/` | Public | Landing page and staff sign-in link |
 | `/accounts/login/` | Public | Staff authentication |
 | `/visitors/register/` | Staff | Create a visitor record |
-| `/visits/` | Staff | Kiosk: lookup, time in, time out |
+| `/visitors/<uuid>/` | Staff | Visitor profile, QR badge, and full visit history |
+| `/visitors/<uuid>/qr.svg` | Staff | Download/print the visitor's QR code |
+| `/visits/` | Staff | Kiosk: lookup, QR scan, time in, time out |
 | `/dashboard/` | Staff | Today's counters, filters, and records (admins see all history) |
 | `/dashboard/export/?format=csv\|pdf\|xlsx` | Admin | Download a filtered report |
 | `/dashboard/<uuid>/delete/` | Admin | Soft-delete a visit |
-| `/admin/` | Admin | Django admin (users, visitors, purposes, audit log) |
+| `/admin/` | Admin | Admin panel (users, purposes, visitors, visits, audit log) |
+| `/django-admin/` | Admin | Django admin (model-level users, visitors, purposes, API tokens, audit log) |
 | `/healthz/` | Public | JSON health probe |
+| `/api/v1/` | Staff / API token | Versioned visitor directory API |
+
+---
+
+## Visitor Directory API (v1)
+
+The API uses either a staff Django session (GET requests; writes also need the
+CSRF token) or a scoped Bearer token for server-to-server clients.
+
+| Method | Endpoint | Scope | Purpose |
+|--------|----------|-------|---------|
+| `GET` | `/api/v1/purposes/` | `purposes:read` | Active visit purposes |
+| `GET` | `/api/v1/visitors/?q=&type=&limit=` | `visitors:read` | Search the directory |
+| `GET` | `/api/v1/visitors/<uuid>/` | `visitors:read` | Visitor profile + active visit |
+| `POST` | `/api/v1/visitors/` | `visitors:write` | Register one visitor |
+| `POST` | `/api/v1/visitors/bulk/` | `visitors:bulk` (admin owner) | Import or sync visitors |
+
+Create a token (the raw value is printed once and never stored):
+
+```powershell
+python manage.py create_api_token --name "SIS sync" --owner admin `
+  --scopes visitors:read,visitors:bulk --expires 2026-12-31
+```
+
+Use it with:
+
+```powershell
+curl.exe -H "Authorization: Bearer visitra_..." `
+  "http://127.0.0.1:8000/api/v1/visitors/?q=Maria"
+```
+
+Single registration requires `consent: true` and the same type-specific fields
+as the kiosk form. The response is `201`; duplicates return `409`.
+
+Bulk imports accept `source`, `mode` (`upsert`, `create_only`, or `dry_run`), and
+up to 500 rows. Rows are matched on `(visitor_type, identifier)`, so external
+visitors need an identifier. A partial failure returns `207` with a `failed`
+list; each row is processed independently. Bulk is restricted to an
+administrator-owned token and is recorded as one `VISITOR_IMPORTED` audit entry.
+
+Tokens are hashed in the database. Revoke a token by clearing `is_active` in
+Django admin. The token owner's account is used for permission checks and audit
+attribution, so disabling the owner also disables the token.
+
+---
+
+## QR check-in
+
+Each visitor record has a unique, reusable QR code. The QR payload is a signed
+token derived from the visitor UUID:
+
+```
+visitra:v1:<django.core.signing token>
+```
+
+Nothing extra is stored in SQL or Firestore, so existing visitors get a working
+code immediately. The signature makes edited or forged tokens detectable; a
+deactivated visitor's code is rejected on scan. Rotating `DJANGO_SECRET_KEY`
+invalidates every printed QR code, so reprint badges if that key is changed.
+
+### Staff workflow
+
+1. Register a first-time visitor under `/visitors/register/`.
+2. After saving, the visitor profile opens automatically with a highlighted QR
+   badge and the prompt to photograph it. Ask the visitor to take a photo of the
+   on-screen QR; no visitor account or login is involved. Staff can also print
+   the badge.
+3. On the kiosk, click **Scan QR**, allow camera access, and hold the visitor's
+   QR photo or printed badge in the frame.
+4. The scanner resolves the visitor and fills the kiosk card. Choose a purpose
+   and click **Time in**. Returning visitors never need their details re-typed.
+
+The scanner is an in-app check-in API, not a third-party service: the browser
+decodes the QR locally with the vendored `jsQR` library and posts the payload to
+`POST /visits/api/qr/`. The existing `VisitService` then enforces the
+one-active-visit, duplicate-purpose-per-day, and purpose rules.
+
+Camera access requires HTTPS in production (or `http://localhost` during
+development). If the device has no camera or the user denies permission, normal
+visitor lookup still works.
 
 ---
 
@@ -136,7 +221,7 @@ reports/         dashboard and delete views, CSV/PDF/XLSX exporters, factory
 audit/           append-only ActivityLog + Firestore audit repository
 templates/       server-rendered pages and shared partials
 static/          CSS design system, ES-module JavaScript, logo
-tests/           pytest suite (102 tests)
+tests/           pytest suite (135 tests)
 ```
 
 Requests flow in one direction:
@@ -217,8 +302,9 @@ Coverage areas:
 - fixed-clock date boundaries and duration formatting
 - CSV/PDF/XLSX exporters and factory behaviour
 - authentication (username and email), role permissions, login throttling and
-  auditing, kiosk/lookup APIs, registration, dashboard filters, exports, and
-  soft delete
+  auditing, kiosk/lookup APIs, visitor directory API and tokens, registration,
+  QR token signing/scanner APIs, visitor QR/history pages, dashboard filters,
+  exports, and soft delete
 - production settings fail-closed checks and the demo-seeding guard
 
 The suite uses a separate test database; it never touches `db.sqlite3`.
@@ -348,7 +434,7 @@ Each test uses a unique collection prefix, so emulator runs stay isolated.
   run in Python over the candidate documents, matching the old `icontains`
   behaviour. If the visits collection grows large, add composite indexes and
   push predicates into `visits/repository.py`.
-- **Admin:** purposes and visitors edited in `/admin/` are mirrored to
+- **Admin:** purposes and visitors edited in `/django-admin/` are mirrored to
   Firestore on save and delete. Visits are read-only there while Firestore is
   enabled, because the admin writes SQL directly and would bypass the system of
   record.

@@ -6,6 +6,8 @@ or the relational mirror, so views and serializers stay unchanged.
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from django.core.exceptions import ValidationError
 from django.db.models import Prefetch
 
@@ -60,7 +62,13 @@ class VisitorSelector:
 
         if is_enabled():
             record = VisitorRepository().get(visitor_id)
-            return record if record and record.is_active else None
+            if not record or not record.is_active:
+                return None
+
+            from visits.repository import VisitRepository
+
+            active = VisitRepository().active_for_visitor(record.id)
+            return replace(record, active_visits=tuple(active))
 
         try:
             return Visitor.objects.active().filter(pk=visitor_id).first()

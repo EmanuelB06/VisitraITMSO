@@ -107,12 +107,12 @@ def test_admin_nav_requires_staff_status(client):
 
     client.force_login(user)
     response = client.get(reverse("home"))
-    assert reverse("admin:index").encode() not in response.content
+    assert reverse("adminpanel:dashboard").encode() not in response.content
 
     user.is_staff = True
     user.save(update_fields=["is_staff"])
     response = client.get(reverse("home"))
-    assert reverse("admin:index").encode() in response.content
+    assert reverse("adminpanel:dashboard").encode() in response.content
 
 
 @pytest.mark.django_db

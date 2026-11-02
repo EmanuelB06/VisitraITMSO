@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ visitor.name }} · VisitraITMSO{% endblock %}
+{% block page_class %}page-wide{% endblock %}
+
+{% block content %}
+{% if new_registration %}
+  <div class="alert alert-success registration-banner" role="status">
+    <svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>
+    <div>
+      <strong>Visitor registered successfully.</strong>
+      Ask the visitor to take a photo of the QR code below now. They do not need an account or login.
+    </div>
+  </div>
+{% endif %}
+
+<section class="screen-head">
+  <div>
+    <a class="back-link" href="{% url 'visits:kiosk' %}">
+      <svg class="icon" aria-hidden="true"><use href="#i-back"/></svg>
+      Kiosk
+    </a>
+    <p class="eyebrow">Visitor profile</p>
+    <h1>{{ visitor.name }}</h1>
+    <p class="muted">{{ visitor.type_label }}{% if visitor.identifier %} · {{ visitor.identifier_label }} {{ visitor.identifier }}{% endif %}</p>
+  </div>
+  <div class="head-actions">
+    <a class="btn btn-primary" href="{{ kiosk_url }}">
+      <svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>
+      Log a visit
+    </a>
+    <a class="btn btn-ghost" href="{% url 'reports:dashboard' %}">
+      <svg class="icon" aria-hidden="true"><use href="#i-dashboard"/></svg>
+      Dashboard
+    </a>
+  </div>
+</section>
+
+<div class="profile-layout">
+  <aside class="card qr-card{% if new_registration %} qr-card-new{% endif %}" aria-labelledby="qr-title">
+    <div class="qr-head">
+      <div>
+        <h2 id="qr-title">OneTap check-in QR</h2>
+        <p class="hint">Unique and reusable for every visit.</p>
+      </div>
+      <span class="badge badge-blue">QR</span>
+    </div>
+    <div class="qr-frame">
+      <img src="{{ qr_url }}" alt="Check-in QR code for {{ visitor.name }}" width="320" height="320" loading="eager">
+    </div>
+    <p class="qr-name">{{ visitor.name }}</p>
+    <p class="qr-ref">{{ visitor.identifier_label }}: {{ visitor.identifier|default:"—" }}</p>
+    <p class="hint">Ask the visitor to photograph this QR code from the screen. Staff scan the photo on their next visit.</p>
+    <button type="button" class="btn btn-ghost btn-block" id="print-qr">
+      <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>
+      Print QR badge
+    </button>
+  </aside>
+
+  <section class="card profile-card" aria-labelledby="profile-title">
+    <div class="profile-head">
+      <span class="person-avatar">{{ visitor.name|slice:":1"|upper }}</span>
+      <div>
+        <h2 id="profile-title">{{ visitor.name }}</h2>
+        <span class="badge {% if visitor.is_active %}badge-green{% else %}badge-amber{% endif %}">
+          {% if visitor.is_active %}Active{% else %}Inactive{% endif %}
+        </span>
+      </div>
+    </div>
+
+    <dl class="profile-grid">
+      <div><dt>Visitor type</dt><dd>{{ visitor.type_label }}</dd></div>
+      <div><dt>{{ visitor.identifier_label }}</dt><dd>{{ visitor.identifier|default:"—" }}</dd></div>
+      {% if visitor.visitor_type == "STUDENT" %}
+        <div><dt>Student level</dt><dd>{{ visitor.get_student_type_display|default:"—" }}</dd></div>
+        <div><dt>Course</dt><dd>{{ visitor.course|default:"—" }}</dd></div>
+        <div><dt>Year / grade</dt><dd>{{ visitor.year_level|default:"—" }}</dd></div>
+      {% elif visitor.visitor_type == "FACULTY" %}
+        <div><dt>Department</dt><dd>{{ visitor.department|default:"—" }}</dd></div>
+      {% elif visitor.visitor_type == "EXTERNAL" %}
+        <div><dt>Organization</dt><dd>{{ visitor.organization|default:"—" }}</dd></div>
+        <div><dt>Contact number</dt><dd>{{ visitor.contact_number|default:"—" }}</dd></div>
+      {% endif %}
+    </dl>
+
+    <p class="hint">Show this visitor's QR code to the front desk for a one-scan check-in. Staff still choose the visit purpose before time in.</p>
+  </section>
+</div>
+
+<section class="history-section" aria-labelledby="history-title">
+  <div class="records-head">
+    <h2 id="history-title">
+      Visit history
+      <span class="muted">({{ visits|length }})</span>
+    </h2>
+  </div>
+
+  {% if visits %}
+    <div class="history-list">
+      {% for visit in visits %}
+        <article class="card history-item {% if visit.is_active %}history-active{% endif %}">
+          <div class="history-main">
+            <div class="history-purpose">
+              <strong>{{ visit.display_purpose }}</strong>
+              <span class="badge {% if visit.is_active %}badge-green{% else %}badge-amber{% endif %}">
+                {{ visit.status_label }}
+              </span>
+            </div>
+            <div class="record-times">
+              <span><small>Time in</small><strong>{{ visit.time_in|date:"M d, Y h:i A" }}</strong></span>
+              <span><small>Time out</small><strong>{% if visit.time_out %}{{ visit.time_out|date:"M d, Y h:i A" }}{% else %}—{% endif %}</strong></span>
+              <span><small>Duration</small><strong>{{ visit.duration_label }}</strong></span>
+            </div>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="card empty-state">
+      <svg class="icon empty-icon" aria-hidden="true"><use href="#i-clock"/></svg>
+      <h2>No visits yet</h2>
+      <p class="muted">This visitor has no recorded visits.</p>
+      <a class="btn btn-primary btn-sm" href="{{ kiosk_url }}">Log the first visit</a>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+  <script type="module" src="{% static 'js/profile.js' %}"></script>
+{% endblock %}

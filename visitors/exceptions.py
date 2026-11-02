@@ -9,3 +9,7 @@ class DuplicateVisitorError(DomainError):
 
 class InvalidVisitorError(DomainError):
     """The supplied visitor data is incomplete or malformed."""
+
+
+class InvalidQrCodeError(DomainError):
+    """The scanned QR code is malformed, forged, or no longer valid."""

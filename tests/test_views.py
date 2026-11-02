@@ -194,8 +194,45 @@ def test_registration_creates_visitor_and_redirects(client, staff_user):
 
     assert response.status_code == 302
     visitor = Visitor.objects.get(identifier="2024-00999")
-    assert response["Location"] == f"{reverse('visits:kiosk')}?visitor={visitor.pk}"
+    profile_url = reverse("visitors:detail", kwargs={"pk": visitor.pk})
+    assert response["Location"] == f"{profile_url}?new=1"
     assert visitor.student_type == Visitor.StudentType.COLLEGE
+
+
+@pytest.mark.django_db
+def test_registration_redirects_to_photographable_qr(client, staff_user):
+    client.force_login(staff_user)
+
+    response = client.post(
+        reverse("visitors:register"),
+        {
+            "visitor_type": "EXTERNAL",
+            "name": "Photo Visitor",
+            "organization": "DepEd",
+            "consent": "on",
+        },
+        follow=True,
+    )
+
+    visitor = Visitor.objects.get(name="Photo Visitor")
+    qr_url = reverse("visitors:qr", kwargs={"pk": visitor.pk})
+
+    assert response.status_code == 200
+    profile_url = reverse("visitors:detail", kwargs={"pk": visitor.pk})
+    assert response.redirect_chain[-1][0] == f"{profile_url}?new=1"
+    assert b"Visitor registered successfully" in response.content
+    assert b"take a photo" in response.content
+    assert f'src="{qr_url}"'.encode() in response.content
+
+
+@pytest.mark.django_db
+def test_visitor_profile_hides_registration_banner_by_default(client, staff_user, student):
+    client.force_login(staff_user)
+
+    response = client.get(reverse("visitors:detail", kwargs={"pk": student.pk}))
+
+    assert response.status_code == 200
+    assert b"Visitor registered successfully" not in response.content
 
 
 @pytest.mark.django_db

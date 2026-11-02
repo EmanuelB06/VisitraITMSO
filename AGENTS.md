@@ -5,7 +5,7 @@ Django 5.2 visitor-logging app with server-rendered templates and small JSON API
 ## Commands (Windows, repository venv)
 
 ```powershell
-.\.venv\Scripts\python.exe -m pytest -q          # full suite: currently 102 tests, ~85 s
+.\.venv\Scripts\python.exe -m pytest -q          # full suite: currently 135 tests, ~155 s
 .\.venv\Scripts\python.exe -m pytest tests/test_views.py::test_admin_exports -q
 .\.venv\Scripts\python.exe -m pytest tests/test_visit_service.py -k time_out -q
 .\.venv\Scripts\python.exe manage.py check

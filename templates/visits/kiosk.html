@@ -35,6 +35,10 @@
         <h2 id="kiosk-title">Visitor lookup</h2>
         <p class="hint">Find the visitor, choose a purpose, then record the visit.</p>
       </div>
+      <button type="button" class="btn btn-primary btn-sm" id="scan-qr-btn">
+        <svg class="icon" aria-hidden="true"><use href="#i-qr"/></svg>
+        Scan QR
+      </button>
     </div>
 
     <div class="segmented" id="visitor-tabs" role="tablist" aria-label="Visitor type">
@@ -72,6 +76,7 @@
         <strong id="matched-name"></strong>
         <span id="matched-detail"></span>
         <small id="matched-identifier"></small>
+        <a class="profile-link" id="matched-profile" href="#" hidden>QR &amp; visit history</a>
       </div>
       <span class="badge badge-blue" id="matched-type"></span>
     </div>
@@ -133,6 +138,30 @@
   </aside>
 </div>
 
+<div class="overlay" id="scanner-overlay" hidden>
+  <div class="overlay-card scanner-card" role="dialog" aria-modal="true" aria-labelledby="scanner-title">
+    <div class="scanner-head">
+      <div>
+        <h2 id="scanner-title">Scan visitor QR</h2>
+        <p class="muted" id="scanner-status">Point the camera at the visitor's QR code.</p>
+      </div>
+      <button type="button" class="icon-btn" id="scanner-close" aria-label="Close scanner">
+        <svg class="icon" aria-hidden="true"><use href="#i-close"/></svg>
+      </button>
+    </div>
+    <div class="scanner-stage">
+      <video id="scanner-video" playsinline muted></video>
+      <canvas id="scanner-canvas" hidden></canvas>
+      <div class="scanner-frame" aria-hidden="true"></div>
+    </div>
+    <p class="hint center" id="scanner-hint">Hold the QR code inside the frame.</p>
+    <div class="scanner-actions">
+      <button type="button" class="btn btn-ghost" id="scanner-cancel">Cancel</button>
+      <button type="button" class="btn btn-primary" id="scanner-retry" hidden>Scan again</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="success-overlay" hidden>
   <div class="overlay-card" role="status" aria-live="polite">
     <span class="overlay-icon overlay-icon-green">
@@ -147,5 +176,6 @@
 {% endblock %}
 
 {% block scripts %}
+  <script src="{% static 'js/vendor/jsqr.min.js' %}"></script>
   <script type="module" src="{% static 'js/kiosk.js' %}"></script>
 {% endblock %}

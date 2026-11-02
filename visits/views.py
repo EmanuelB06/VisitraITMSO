@@ -12,6 +12,7 @@ from django.views.generic import TemplateView
 from accounts.mixins import StaffRequiredMixin, api_staff_required
 from core.api import first_form_error, json_error, parse_json_body
 from core.exceptions import DomainError
+from visitors.qr import read_qr_payload
 from visitors.selectors import VisitorSelector
 from visitors.serializers import visitor_payload
 
@@ -45,11 +46,41 @@ class KioskView(StaffRequiredMixin, TemplateView):
             "visitor": visitor_payload(prefill) if prefill else None,
             "urls": {
                 "lookup": reverse("visitors:lookup"),
+                "qr_scan": reverse("visits:qr-scan"),
                 "time_in": reverse("visits:time-in"),
                 "active": reverse("visits:active"),
             },
         }
         return context
+
+
+@api_staff_required
+@require_POST
+def qr_scan(request):
+    """Resolve a scanned visitor QR code into a visitor record.
+
+    This only identifies the visitor; the actual time-in is still recorded by
+    ``time_in`` after the staff member chooses a purpose, which keeps the
+    existing duplicate and open-visit rules authoritative.
+    """
+    payload = parse_json_body(request)
+    if payload is None:
+        return json_error("Invalid JSON body.")
+
+    raw = payload.get("qr")
+    if not isinstance(raw, str) or not raw.strip():
+        return json_error("Scan a visitor QR code first.")
+
+    try:
+        visitor_id = read_qr_payload(raw)
+    except DomainError as exc:
+        return json_error(str(exc), status=404)
+
+    visitor = VisitorSelector.get_by_id(visitor_id)
+    if visitor is None:
+        return json_error("This QR code could not be recognized.", status=404)
+
+    return JsonResponse({"visitor": visitor_payload(visitor)})
 
 
 @api_staff_required

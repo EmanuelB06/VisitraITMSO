@@ -7,6 +7,7 @@ receives a copy.
 
 from __future__ import annotations
 
+import json
 import os
 import uuid
 
@@ -14,11 +15,12 @@ import pytest
 from django.core.management import call_command
 from django.urls import reverse
 
+from accounts.models import ApiToken
 from audit.models import ActivityLog
 from audit.repository import AuditRepository
 from core.firestore import config, get_store, reset_store
 from core.records import PurposeRecord
-from core.store import StoreUnavailable
+from core.store import StoreUnavailable, _FirestoreTransaction
 from visits.exceptions import DuplicateVisitError, OpenVisitError
 from visits.models import Purpose, Visit
 from visits.repository import PurposeRepository, VisitRepository
@@ -26,6 +28,7 @@ from visits.selectors import VisitSelector
 from visits.services import VisitService
 from visitors.exceptions import DuplicateVisitorError
 from visitors.models import Visitor
+from visitors.qr import make_qr_payload
 from visitors.repository import VisitorRepository
 from visitors.selectors import VisitorSelector
 from visitors.services import VisitorRegistration, VisitorService
@@ -261,6 +264,32 @@ def test_lookup_attaches_the_active_visit(firestore, purpose):
 
 
 @pytest.mark.django_db
+def test_qr_scan_and_profile_history_read_firestore(firestore, client, staff_user, purpose):
+    visitor = register_student()
+    visit = VisitService().time_in(visitor=visitor, purpose=purpose)
+    client.force_login(staff_user)
+
+    response = client.post(
+        reverse("visits:qr-scan"),
+        data=json.dumps({"qr": make_qr_payload(visitor)}),
+        content_type="application/json",
+    )
+    assert response.status_code == 200
+    payload = response.json()["visitor"]
+    assert payload["id"] == str(visitor.pk)
+    assert payload["active_visit"]["id"] == str(visit.pk)
+
+    response = client.get(reverse("visitors:detail", kwargs={"pk": visitor.pk}))
+    assert response.status_code == 200
+    assert b"Maria Santos" in response.content
+    assert b"MS 365 Assistance" in response.content
+
+    response = client.get(reverse("visitors:qr", kwargs={"pk": visitor.pk}))
+    assert response.status_code == 200
+    assert b"<svg" in response.content
+
+
+@pytest.mark.django_db
 def test_kiosk_bootstrap_uses_firestore_purposes(firestore, client, staff_user):
     purpose = Purpose.objects.create(name="Canva Registration", sort_order=30)
     PurposeRepository().save(
@@ -379,3 +408,67 @@ def test_export_activity_metadata_stays_flat(firestore, client, admin_user, purp
     stored = AuditRepository().list(action="EXPORT")
     assert stored[0].metadata["format"] == "csv"
 
+
+@pytest.mark.django_db
+def test_api_bulk_import_writes_firestore_and_sql(firestore, client, admin_user):
+    _, raw = ApiToken.issue(
+        name="SIS sync",
+        owner=admin_user,
+        scopes=[ApiToken.Scope.VISITORS_BULK],
+    )
+
+    response = client.post(
+        reverse("api:visitors-bulk"),
+        data=json.dumps(
+            {
+                "source": "SIS",
+                "visitors": [
+                    {
+                        "visitor_type": "STUDENT",
+                        "name": "Maria Santos",
+                        "identifier": "2024-00123",
+                        "course": "BS Information Technology",
+                    }
+                ],
+            }
+        ),
+        content_type="application/json",
+        HTTP_AUTHORIZATION=f"Bearer {raw}",
+    )
+
+    assert response.status_code == 200
+    assert response.json()["created"] == 1
+
+    stored = VisitorRepository().lookup("Maria")
+    assert stored[0].name == "Maria Santos"
+    assert Visitor.objects.filter(identifier="2024-00123").exists()
+    assert AuditRepository().list(action="VISITOR_IMPORTED")
+
+def test_transaction_adapter_reads_single_snapshot_from_generator():
+    class FakeSnapshot:
+        exists = True
+        id = "visitor-1"
+
+        def to_dict(self):
+            return {"name": "Maria Santos"}
+
+    class FakeTransaction:
+        def get(self, ref):
+            assert ref == ("visitra_visitors", "visitor-1")
+            yield FakeSnapshot()
+
+    class FakeCollection:
+        def document(self, doc_id):
+            return ("visitra_visitors", doc_id)
+
+    class FakeClient:
+        def collection(self, name):
+            assert name == "visitra_visitors"
+            return FakeCollection()
+
+    transaction = _FirestoreTransaction(FakeClient(), FakeTransaction())
+
+    assert transaction.get("visitra_visitors", "visitor-1") == {
+        "name": "Maria Santos",
+        "id": "visitor-1",
+    }

@@ -12,6 +12,15 @@ def format_moment(value) -> str:
     return timezone.localtime(value).strftime("%b %d, %Y %I:%M %p")
 
 
+def purpose_payload(purpose) -> dict:
+    return {
+        "id": str(purpose.pk),
+        "name": purpose.name,
+        "requires_specification": purpose.requires_specification,
+        "sort_order": getattr(purpose, "sort_order", 0),
+    }
+
+
 def visit_payload(visit) -> dict:
     return {
         "id": str(visit.pk),
