@@ -50,6 +50,16 @@ if (bootstrapElement) {
   const overlayDetail = document.getElementById("success-detail");
   const activeList = document.getElementById("active-list");
   const refreshButton = document.getElementById("refresh-active");
+  const matchedProfile = document.getElementById("matched-profile");
+  const scanButton = document.getElementById("scan-qr-btn");
+  const scannerOverlay = document.getElementById("scanner-overlay");
+  const scannerVideo = document.getElementById("scanner-video");
+  const scannerCanvas = document.getElementById("scanner-canvas");
+  const scannerStatus = document.getElementById("scanner-status");
+  const scannerHint = document.getElementById("scanner-hint");
+  const scannerClose = document.getElementById("scanner-close");
+  const scannerCancel = document.getElementById("scanner-cancel");
+  const scannerRetry = document.getElementById("scanner-retry");
 
   const state = {
     type: "STUDENT",
@@ -63,6 +73,13 @@ if (bootstrapElement) {
 
   let lookupTimer = null;
   let overlayTimer = null;
+
+  const scanner = {
+    stream: null,
+    frame: null,
+    active: false,
+    busy: false,
+  };
 
   /* ------------------------------------------------------------
      Visitor type tabs
@@ -95,6 +112,7 @@ if (bootstrapElement) {
     state.visitor = null;
     state.activeVisit = null;
     matched.hidden = true;
+    matchedProfile.hidden = true;
     session.hidden = true;
     purposeSelect.disabled = false;
     updateUi();
@@ -114,6 +132,7 @@ if (bootstrapElement) {
     search.value = "";
     clearButton.hidden = true;
     matched.hidden = true;
+    matchedProfile.hidden = true;
     session.hidden = true;
     purposeSelect.disabled = false;
     purposeSelect.value = "";
@@ -233,14 +252,10 @@ if (bootstrapElement) {
   /* ------------------------------------------------------------
      Selected visitor + active session
      ------------------------------------------------------------ */
-  function selectSuggestion(index) {
-    const visitor = state.suggestions[index];
-    if (!visitor) return;
-
+  function applyVisitor(visitor) {
     state.visitor = visitor;
     search.value = visitor.identifier || visitor.name;
     clearButton.hidden = false;
-    clearSuggestions();
 
     matchedInitial.textContent = (visitor.name || "?").slice(0, 1).toUpperCase();
     matchedName.textContent = visitor.name;
@@ -249,8 +264,19 @@ if (bootstrapElement) {
     matchedType.textContent = visitor.type_label;
     matched.hidden = false;
 
+    matchedProfile.href = visitor.profile_url || "#";
+    matchedProfile.hidden = !visitor.profile_url;
+
     setActiveVisit(visitor.active_visit || null);
     updateUi();
+  }
+
+  function selectSuggestion(index) {
+    const visitor = state.suggestions[index];
+    if (!visitor) return;
+
+    clearSuggestions();
+    applyVisitor(visitor);
     purposeSelect.focus();
   }
 
@@ -314,6 +340,160 @@ if (bootstrapElement) {
       kioskHint.textContent = "Ready to record this visit.";
     }
   }
+
+  /* ------------------------------------------------------------
+     Camera QR scanner
+     ------------------------------------------------------------ */
+  function scannerSupported() {
+    return Boolean(
+      navigator.mediaDevices?.getUserMedia &&
+        typeof window.jsQR === "function" &&
+        scannerOverlay &&
+        scannerVideo &&
+        scannerCanvas,
+    );
+  }
+
+  function stopScannerStream() {
+    if (scanner.frame) {
+      cancelAnimationFrame(scanner.frame);
+      scanner.frame = null;
+    }
+    scanner.active = false;
+    scanner.busy = false;
+    if (scanner.stream) {
+      scanner.stream.getTracks().forEach((track) => track.stop());
+      scanner.stream = null;
+    }
+    scannerVideo.srcObject = null;
+  }
+
+  function closeScanner() {
+    stopScannerStream();
+    scannerOverlay.hidden = true;
+    scannerRetry.hidden = true;
+    scannerStatus.textContent = "Point the camera at the visitor's QR code.";
+    scannerHint.textContent = "Hold the QR code inside the frame.";
+  }
+
+  function scannerFailure(message) {
+    scannerStatus.textContent = "QR code not recognized.";
+    scannerHint.textContent = message;
+    scannerRetry.hidden = false;
+    scanner.active = false;
+    scanner.busy = false;
+  }
+
+  async function handleScannedCode(text) {
+    scannerStatus.textContent = "Checking QR code…";
+    scannerHint.textContent = "Please wait.";
+
+    try {
+      const data = await postJSON(urls.qr_scan, { qr: text });
+      const visitor = data.visitor;
+      closeScanner();
+      setType(visitor.visitor_type, { focusSearch: false });
+      applyVisitor(visitor);
+      if (!visitor.active_visit) purposeSelect.focus();
+      showSuccess(
+        "QR code recognized",
+        visitor.active_visit
+          ? `${visitor.name} · already inside`
+          : `${visitor.name} · choose a purpose to check in`,
+      );
+      refreshActiveList();
+    } catch (error) {
+      scannerFailure(error.message);
+    }
+  }
+
+  function scanFrame() {
+    if (!scanner.active) return;
+
+    if (scannerVideo.readyState === scannerVideo.HAVE_ENOUGH_DATA) {
+      const width = scannerVideo.videoWidth;
+      const height = scannerVideo.videoHeight;
+
+      if (width && height) {
+        // Decode a capped-size frame: fast enough for live video and still
+        // detailed enough to read a printed visitor badge.
+        const scale = Math.min(1, 640 / Math.max(width, height));
+        const frameWidth = Math.round(width * scale);
+        const frameHeight = Math.round(height * scale);
+        const context = scannerCanvas.getContext("2d", { willReadFrequently: true });
+        scannerCanvas.width = frameWidth;
+        scannerCanvas.height = frameHeight;
+        context.drawImage(scannerVideo, 0, 0, frameWidth, frameHeight);
+        const image = context.getImageData(0, 0, frameWidth, frameHeight);
+        const result = window.jsQR(image.data, frameWidth, frameHeight, {
+          inversionAttempts: "dontInvert",
+        });
+
+        if (result?.data && !scanner.busy) {
+          scanner.busy = true;
+          handleScannedCode(result.data);
+          return;
+        }
+      }
+    }
+
+    scanner.frame = requestAnimationFrame(scanFrame);
+  }
+
+  async function startScanner() {
+    if (!scannerSupported()) {
+      toast("Camera scanning is not supported in this browser. Use visitor lookup instead.", "warning");
+      return;
+    }
+
+    scannerOverlay.hidden = false;
+    scannerRetry.hidden = true;
+    scannerStatus.textContent = "Starting camera…";
+    scannerHint.textContent = "Allow camera access when prompted.";
+
+    try {
+      scanner.stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } },
+        audio: false,
+      });
+      scannerVideo.srcObject = scanner.stream;
+      await scannerVideo.play();
+      scanner.active = true;
+      scanner.busy = false;
+      scannerStatus.textContent = "Point the camera at the visitor's QR code.";
+      scannerHint.textContent = "Hold the QR code inside the frame.";
+      scanFrame();
+    } catch (error) {
+      stopScannerStream();
+      scannerHint.textContent =
+        error?.name === "NotAllowedError"
+          ? "Camera permission was denied. Allow access or use visitor lookup instead."
+          : "No usable camera was found. Use visitor lookup instead.";
+      scannerStatus.textContent = "Camera unavailable.";
+      scannerRetry.hidden = false;
+    }
+  }
+
+  function retryScanner() {
+    scannerRetry.hidden = true;
+    if (scanner.stream) {
+      scannerStatus.textContent = "Point the camera at the visitor's QR code.";
+      scannerHint.textContent = "Hold the QR code inside the frame.";
+      scanner.busy = false;
+      scanner.active = true;
+      scanFrame();
+      return;
+    }
+    startScanner();
+  }
+
+  scanButton?.addEventListener("click", startScanner);
+  scannerClose?.addEventListener("click", closeScanner);
+  scannerCancel?.addEventListener("click", closeScanner);
+  scannerRetry?.addEventListener("click", retryScanner);
+  scannerOverlay?.addEventListener("click", (event) => {
+    if (event.target === scannerOverlay) closeScanner();
+  });
 
   /* ------------------------------------------------------------
      Time in / time out
@@ -474,17 +654,7 @@ if (bootstrapElement) {
   if (bootstrap.visitor) {
     const visitor = bootstrap.visitor;
     setType(visitor.visitor_type, { focusSearch: false });
-    state.visitor = visitor;
-    search.value = visitor.identifier || visitor.name;
-    clearButton.hidden = false;
-    matchedInitial.textContent = (visitor.name || "?").slice(0, 1).toUpperCase();
-    matchedName.textContent = visitor.name;
-    matchedDetail.textContent = visitor.detail;
-    matchedIdentifier.textContent = `${visitor.identifier_label}: ${visitor.identifier || "—"}`;
-    matchedType.textContent = visitor.type_label;
-    matched.hidden = false;
-    setActiveVisit(visitor.active_visit || null);
-    updateUi();
+    applyVisitor(visitor);
   }
 
   refreshActiveList();

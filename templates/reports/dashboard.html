@@ -165,7 +165,7 @@
         <div class="record-person">
           <span class="avatar">{{ visit.visitor.name|slice:":1"|upper }}</span>
           <div>
-            <strong>{{ visit.visitor.name }}</strong>
+            <a class="record-person-link" href="{% url 'visitors:detail' visit.visitor.pk %}">{{ visit.visitor.name }}</a>
             <small>ID: {{ visit.visitor.identifier }} · {{ visit.visitor.type_label }}</small>
           </div>
         </div>

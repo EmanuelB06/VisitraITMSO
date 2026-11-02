@@ -38,4 +38,25 @@ def visitor_payload(visitor) -> dict:
         "identifier_label": visitor.identifier_label,
         "detail": visitor.detail_line,
         "active_visit": active,
+        "profile_url": reverse("visitors:detail", kwargs={"pk": visitor.pk}),
+        "qr_url": reverse("visitors:qr", kwargs={"pk": visitor.pk}),
     }
+
+
+def visitor_directory_payload(visitor) -> dict:
+    payload = visitor_payload(visitor)
+    payload.update(
+        {
+            "student_type": visitor.student_type,
+            "student_type_label": visitor.get_student_type_display() if visitor.student_type else "",
+            "course": visitor.course,
+            "year_level": visitor.year_level,
+            "department": visitor.department,
+            "organization": visitor.organization,
+            "contact_number": visitor.contact_number,
+            "is_active": visitor.is_active,
+            "created_at": _format_moment(getattr(visitor, "created_at", None)),
+            "updated_at": _format_moment(getattr(visitor, "updated_at", None)),
+        }
+    )
+    return payload

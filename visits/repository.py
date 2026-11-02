@@ -173,6 +173,16 @@ class VisitRepository:
             return _visit_from_doc(doc)
         return None
 
+    def for_visitor(self, visitor_id) -> list[VisitRecord]:
+        """Return every visible visit for one visitor, newest first."""
+        records = [
+            _visit_from_doc(doc)
+            for doc in self._for_visitor(visitor_id)
+            if not doc.get("deleted_at")
+        ]
+        records.sort(key=lambda record: record.time_in, reverse=True)
+        return records
+
     def active_for_visitor(self, visitor_id) -> list[VisitRecord]:
         return [
             _visit_from_doc(doc)

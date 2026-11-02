@@ -111,6 +111,25 @@ class VisitSelector:
             return None
 
     @staticmethod
+    def for_visitor(visitor_id):
+        """All visible visits for one visitor, newest first."""
+        if not visitor_id:
+            return []
+
+        if is_enabled():
+            return VisitRepository().for_visitor(visitor_id)
+
+        try:
+            return list(
+                Visit.objects.visible()
+                .for_visitor(visitor_id)
+                .select_related("purpose", "logged_by")
+                .order_by("-time_in")
+            )
+        except (ValidationError, ValueError, TypeError):
+            return []
+
+    @staticmethod
     def active(limit: int = 50):
         if is_enabled():
             return VisitRepository().active(limit)

@@ -182,7 +182,12 @@ class _FirestoreTransaction:
 
     def get(self, collection: str, doc_id: str) -> dict | None:
         snapshot = self._transaction.get(self._ref(collection, doc_id))
-        if not snapshot.exists:
+        # ``Transaction.get`` returns a generator in google-cloud-firestore 2.x
+        # even for a single document reference. Older SDKs return the snapshot
+        # directly, so support both shapes.
+        if not hasattr(snapshot, "exists"):
+            snapshot = next(iter(snapshot), None)
+        if snapshot is None or not snapshot.exists:
             return None
         return {**snapshot.to_dict(), "id": snapshot.id}
 

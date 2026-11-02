@@ -13,4 +13,5 @@ urlpatterns = [
     path("visitors/", include("visitors.urls")),
     path("visits/", include("visits.urls")),
     path("dashboard/", include("reports.urls")),
+    path("api/v1/", include("api.urls")),
 ]

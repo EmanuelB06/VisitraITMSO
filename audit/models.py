@@ -13,11 +13,15 @@ class ActivityLog(UUIDModel, TimeStampedModel):
         LOGIN = "LOGIN", "Signed in"
         LOGIN_FAILED = "LOGIN_FAILED", "Sign-in failed"
         VISITOR_REGISTERED = "VISITOR_REGISTERED", "Visitor registered"
+        VISITOR_UPDATED = "VISITOR_UPDATED", "Visitor updated"
+        VISITOR_IMPORTED = "VISITOR_IMPORTED", "Visitors imported"
         TIME_IN = "TIME_IN", "Time in"
         TIME_OUT = "TIME_OUT", "Time out"
         VISIT_DELETED = "VISIT_DELETED", "Visit deleted"
         EXPORT = "EXPORT", "Report exported"
         ACCESS_CHANGED = "ACCESS_CHANGED", "Access changed"
+        API_TOKEN_CREATED = "API_TOKEN_CREATED", "API token created"
+        API_TOKEN_REVOKED = "API_TOKEN_REVOKED", "API token revoked"
 
     actor = models.ForeignKey(
         settings.AUTH_USER_MODEL,
