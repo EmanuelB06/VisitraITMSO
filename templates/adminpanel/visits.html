@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Visits · Admin Panel{% endblock %}
+{% block content %}
+<section class="page-header">
+  <div class="page-header-inner">
+    <div>
+      <h1 class="page-title">Visits</h1>
+      <p class="page-subtitle">Visit records from Firestore</p>
+    </div>
+    <div class="page-header-actions">
+      <a class="btn btn-ghost" href="{% url 'adminpanel:dashboard' %}">Back</a>
+      <a class="btn btn-primary" href="{% url 'reports:export' %}">Export</a>
+    </div>
+  </div>
+</section>
+
+<section class="panel-card">
+  <div class="panel-card-body">
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Visitor</th>
+            <th>Purpose</th>
+            <th>Time In</th>
+            <th>Time Out</th>
+            <th>Status</th>
+            <th>Logged by</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for v in visits %}
+          <tr>
+            <td>{{ v.id }}</td>
+            <td>{{ v.visitor.name }}</td>
+            <td>{{ v.display_purpose }}</td>
+            <td>{{ v.time_in }}</td>
+            <td>{{ v.time_out|default:"-" }}</td>
+            <td>{{ v.status_label }}</td>
+            <td>{{ v.logged_by_id|default:"-" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7">No visits found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% endblock %}

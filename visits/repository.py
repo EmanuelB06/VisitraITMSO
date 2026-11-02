@@ -111,6 +111,13 @@ class PurposeRepository:
         records.sort(key=lambda record: (record.sort_order, record.name))
         return records
 
+    def list_all(self) -> list[PurposeRecord]:
+        """Every purpose including inactive ones (admin browsing)."""
+        docs = self.store.query(self.collection)
+        records = [_purpose_from_doc(doc) for doc in docs]
+        records.sort(key=lambda record: (record.sort_order, record.name))
+        return records
+
     def get(self, purpose_id) -> PurposeRecord | None:
         if not purpose_id:
             return None
@@ -203,6 +210,11 @@ class VisitRepository:
             if not doc.get("deleted_at") and not doc.get("time_out")
         ]
         return records[:limit]
+
+    def list_all(self, limit: int = 200) -> list[VisitRecord]:
+        """Every visit, soft-deleted ones included (admin browsing)."""
+        docs = self.store.query(self.collection, order=("time_in", "DESCENDING"))
+        return [_visit_from_doc(doc) for doc in docs[:limit]]
 
     def query(self, filters) -> list[VisitRecord]:
         """Mirror ``VisitSelector.apply`` semantics for the dashboard/exports."""

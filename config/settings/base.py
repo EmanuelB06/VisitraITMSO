@@ -29,6 +29,9 @@ DEBUG = env_bool("DJANGO_DEBUG", False)
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost")
 
 INSTALLED_APPS = [
+    # Registered so ``accounts/admin.py`` (and its tests) can import
+    # ``django.contrib.auth.admin``. Its URLs are NOT mounted: ``/admin/``
+    # serves the custom Firestore-backed adminpanel instead.
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -41,6 +44,7 @@ INSTALLED_APPS = [
     "visits",
     "reports",
     "audit",
+    "adminpanel",
 ]
 
 MIDDLEWARE = [
@@ -95,7 +99,7 @@ FIRESTORE_COLLECTION_PREFIX = os.getenv("FIRESTORE_COLLECTION_PREFIX", "visitra"
 AUTH_USER_MODEL = "accounts.User"
 
 AUTHENTICATION_BACKENDS = [
-    "accounts.backends.EmailOrUsernameBackend",
+    "accounts.firestore_backend.FirestoreAuthBackend",
 ]
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -130,6 +134,7 @@ LOGIN_REDIRECT_URL = "visits:kiosk"
 LOGOUT_REDIRECT_URL = "home"
 SESSION_COOKIE_AGE = 60 * 60 * 8  # 8-hour kiosk shift
 SESSION_SAVE_EVERY_REQUEST = True
+SESSION_ENGINE = "core.sessions.firestore"
 
 # Login throttling. The default cache is in-process; with multiple worker
 # processes configure a shared cache backend so lockouts apply site-wide.

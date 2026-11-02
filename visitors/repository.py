@@ -56,6 +56,13 @@ class VisitorRepository:
         self.store = store or get_store()
         self.collection = collection_name(COLLECTION)
 
+    def list_all(self, *, limit: int = 200) -> list[VisitorRecord]:
+        """Every visitor profile including inactive ones (admin browsing)."""
+        docs = self.store.query(self.collection)
+        records = [_from_doc(doc) for doc in docs]
+        records.sort(key=lambda record: (record.name or "").lower())
+        return records[:limit]
+
     def get(self, visitor_id) -> VisitorRecord | None:
         if not visitor_id:
             return None

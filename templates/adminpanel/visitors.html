@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Visitors · Admin Panel{% endblock %}
+{% block content %}
+<section class="page-header">
+  <div class="page-header-inner">
+    <div>
+      <h1 class="page-title">Visitors</h1>
+      <p class="page-subtitle">Visitor records from Firestore</p>
+    </div>
+    <div class="page-header-actions">
+      <a class="btn btn-ghost" href="{% url 'adminpanel:dashboard' %}">Back</a>
+    </div>
+  </div>
+</section>
+
+<section class="panel-card">
+  <div class="panel-card-body">
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Detail</th>
+            <th>Active</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for v in visitors %}
+          <tr>
+            <td>{{ v.identifier|default:v.id }}</td>
+            <td>{{ v.name }}</td>
+            <td>{{ v.visitor_type }}</td>
+            <td>{{ v.course|default:"" }}{{ v.department|default:"" }}{{ v.organization|default:"" }}</td>
+            <td>{{ v.is_active|yesno:"Yes,No" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5">No visitors found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% endblock %}

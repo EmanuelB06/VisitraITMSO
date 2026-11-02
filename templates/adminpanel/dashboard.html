@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Admin Panel · VisitraITMSO{% endblock %}
+{% block content %}
+<section class="page-header">
+  <div class="page-header-inner">
+    <div>
+      <h1 class="page-title">Admin Panel</h1>
+      <p class="page-subtitle">Manage users, purposes, visitors, visits, and audit logs (Firestore-backed)</p>
+    </div>
+  </div>
+</section>
+
+<section class="panel-grid">
+  <article class="panel-card">
+    <header class="panel-card-header">
+      <h2>Overview</h2>
+    </header>
+    <div class="panel-card-body">
+      <ul class="stat-list">
+        <li><strong>{{ users|length }}</strong> Users</li>
+        <li><strong>{{ visit_count }}</strong> Visits</li>
+        <li><strong>{{ visitor_count }}</strong> Visitor records</li>
+        <li><strong>{{ audit_count }}</strong> Audit entries (recent)</li>
+      </ul>
+    </div>
+  </article>
+
+  <article class="panel-card">
+    <header class="panel-card-header">
+      <h2>Quick Links</h2>
+    </header>
+    <div class="panel-card-body">
+      <div class="button-row">
+        <a class="btn btn-primary" href="{% url 'adminpanel:users' %}">Users</a>
+        <a class="btn btn-primary" href="{% url 'adminpanel:purposes' %}">Purposes</a>
+        <a class="btn btn-primary" href="{% url 'adminpanel:visitors' %}">Visitors</a>
+        <a class="btn btn-primary" href="{% url 'adminpanel:visits' %}">Visits</a>
+        <a class="btn btn-primary" href="{% url 'adminpanel:audit' %}">Audit Log</a>
+      </div>
+    </div>
+  </article>
+</section>
+{% endblock %}

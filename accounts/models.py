@@ -13,6 +13,12 @@ from django.db.models.functions import Lower
 
 
 class User(AbstractUser):
+    """A staff or administrator account that can sign into Visitra ITMSO.
+
+    Visitor records (the people processed at the front desk) live in a separate
+    model and never authenticate here.
+    """
+
     class Role(models.TextChoices):
         ADMIN = "ADMIN", "Administrator"
         STAFF = "STAFF", "Front Desk Staff"
@@ -23,7 +29,6 @@ class User(AbstractUser):
         default=Role.STAFF,
         help_text="Administrators can delete records and export reports.",
     )
-    email = models.EmailField("email address", blank=True)
 
     class Meta:
         verbose_name = "user"
@@ -49,3 +54,6 @@ class User(AbstractUser):
     @property
     def display_name(self) -> str:
         return self.get_full_name() or self.username
+
+    def __str__(self) -> str:
+        return self.display_name

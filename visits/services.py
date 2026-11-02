@@ -173,6 +173,8 @@ class VisitService:
             )
 
         try:
+            from accounts.compat import sql_user
+
             visit = Visit.objects.create(
                 visitor=visitor,
                 purpose=purpose,
@@ -180,7 +182,7 @@ class VisitService:
                 purpose_text=purpose_text,
                 time_in=now,
                 visit_date=visit_date,
-                logged_by=actor if getattr(actor, "pk", None) else None,
+                logged_by=sql_user(actor),
             )
         except IntegrityError as exc:
             # Covers a race between the checks above and the database

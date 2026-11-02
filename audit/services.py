@@ -35,8 +35,10 @@ def record(*, action: str, actor=None, entity_type: str = "", entity_id: str = "
             logger.exception("Firestore audit write failed (action=%s)", action)
 
     try:
+        from accounts.compat import sql_user
+
         ActivityLog.record(
-            actor=actor,
+            actor=sql_user(actor),
             action=action,
             entity_type=entity_type,
             entity_id=entity_id,

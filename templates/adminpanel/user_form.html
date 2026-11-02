@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}{{ action }} User · Admin Panel{% endblock %}
+{% block content %}
+<section class="page-header">
+  <div class="page-header-inner">
+    <div>
+      <h1 class="page-title">{{ action }} User</h1>
+      <p class="page-subtitle">Stored in Firestore</p>
+    </div>
+    <div class="page-header-actions">
+      <a class="btn btn-ghost" href="{% url 'adminpanel:users' %}">Back to Users</a>
+    </div>
+  </div>
+</section>
+
+<section class="panel-card">
+  <div class="panel-card-body">
+    <form method="post" class="form-grid">
+      {% csrf_token %}
+      <div class="form-field">
+        <label for="id_username">Username</label>
+        <input id="id_username" name="username" type="text" value="{{ form_user.username|default:'' }}" {% if action == "Edit" %}readonly{% endif %} required>
+      </div>
+      <div class="form-field">
+        <label for="id_email">Email</label>
+        <input id="id_email" name="email" type="email" value="{{ form_user.email|default:'' }}">
+      </div>
+      <div class="form-field">
+        <label for="id_first_name">First Name</label>
+        <input id="id_first_name" name="first_name" type="text" value="{{ form_user.first_name|default:'' }}">
+      </div>
+      <div class="form-field">
+        <label for="id_last_name">Last Name</label>
+        <input id="id_last_name" name="last_name" type="text" value="{{ form_user.last_name|default:'' }}">
+      </div>
+      <div class="form-field">
+        <label for="id_role">Role</label>
+        <select id="id_role" name="role">
+          <option value="STAFF" {% if form_user.role == "STAFF" %}selected{% endif %}>Staff</option>
+          <option value="ADMIN" {% if form_user.role == "ADMIN" %}selected{% endif %}>Administrator</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label for="id_password">Password {% if action == "Edit" %}(leave blank to keep){% endif %}</label>
+        <input id="id_password" name="password" type="password" {% if action == "Create" %}required{% endif %}>
+      </div>
+      <div class="form-field form-field-checkbox">
+        <label><input type="checkbox" name="is_active" {% if form_user.is_active or action == "Create" %}checked{% endif %}> Active</label>
+      </div>
+      <div class="form-field form-field-checkbox">
+        <label><input type="checkbox" name="is_superuser" {% if form_user.is_superuser %}checked{% endif %}> Superuser</label>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" type="submit">Save</button>
+        <a class="btn btn-ghost" href="{% url 'adminpanel:users' %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}
