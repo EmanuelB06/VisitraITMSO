@@ -159,7 +159,7 @@ def test_capabilities_split_staff_and_admin(staff_user, admin_user):
     assert staff["staff"] is True
     assert staff["admin"] is False
     assert staff["view_full_history"] is False
-    assert staff["export_reports"] is False
+    assert staff["export_reports"] is True
     assert staff["delete_visits"] is False
     assert staff["manage_purposes"] is False
     assert staff["manage_users"] is False

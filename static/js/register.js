@@ -21,19 +21,39 @@ const form = document.getElementById("registration-form");
 if (group && form) {
   const radios = Array.from(group.querySelectorAll('input[type="radio"]'));
   const panels = Array.from(document.querySelectorAll("[data-panel]"));
+  const banners = Array.from(document.querySelectorAll("[data-banner]"));
   const identifier = form.querySelector("#id_identifier");
   const identifierLabel = form.querySelector('label[for="id_identifier"]');
   const identifierHint = document.getElementById("identifier-hint");
+  const submitLabel = document.getElementById("register-submit-label");
+
+  const SAVE_LABELS = {
+    STUDENT: "Save Student",
+    FACULTY: "Save Faculty",
+    EXTERNAL: "Save External Visitor",
+  };
 
   const currentType = () => radios.find((radio) => radio.checked)?.value || "STUDENT";
+
+  function labelFor(type) {
+    const key = `label${type.charAt(0)}${type.slice(1).toLowerCase()}`;
+    return submitLabel?.dataset?.[key] || SAVE_LABELS[type] || "";
+  }
 
   function applyType(type, { focus = false } = {}) {
     panels.forEach((panel) => {
       panel.hidden = panel.dataset.panel !== type;
     });
+    banners.forEach((banner) => {
+      banner.hidden = banner.dataset.banner !== type;
+    });
     radios.forEach((radio) => {
       radio.closest(".segment")?.classList.toggle("is-active", radio.checked);
     });
+
+    if (submitLabel) {
+      submitLabel.textContent = labelFor(type);
+    }
 
     const copy = HINTS[type] || HINTS.STUDENT;
     if (identifierLabel) {

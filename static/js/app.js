@@ -49,7 +49,7 @@ if (topbar) {
   window.addEventListener("scroll", syncScrollState, { passive: true });
 }
 
-/* Ask before destructive form submissions (delete record, sign out is safe). */
+/* Ask before destructive or session-ending form submissions. */
 document.querySelectorAll("form[data-confirm]").forEach((form) => {
   form.addEventListener("submit", (event) => {
     const message = form.dataset.confirm || "Are you sure?";

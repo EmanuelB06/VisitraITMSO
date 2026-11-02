@@ -235,7 +235,7 @@ def test_dashboard_reads_firestore(firestore, client, staff_user, purpose):
 
     assert response.status_code == 200
     assert b"Maria Santos" in response.content
-    assert b"Export" not in response.content
+    assert b"Export" in response.content
     assert VisitSelector.summary()["active"] == 1
 
 

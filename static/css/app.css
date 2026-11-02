@@ -736,6 +736,40 @@ textarea.input { min-height: 96px; resize: vertical; }
   cursor: pointer;
 }
 
+/* Tab-style visitor type selector (matches the documented Register screen) */
+.segmented-tabs {
+  padding: 5px;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.segmented-tabs .segment {
+  min-height: 46px;
+  padding: 11px 10px;
+  font-size: 0.9rem;
+}
+
+.type-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid rgba(92, 124, 250, 0.28);
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+.type-banner .icon {
+  flex: none;
+  margin-top: 1px;
+  color: var(--accent-strong);
+}
+.type-banner strong { color: var(--text); }
+
+.form-section .card-title + .hint { margin-top: -6px; margin-bottom: 14px; }
+
 /* ============================================================
    Search & suggestions
    ============================================================ */

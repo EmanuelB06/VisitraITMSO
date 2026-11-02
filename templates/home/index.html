@@ -51,7 +51,32 @@
     <span id="quick-access-title">Quick access</span>
   </div>
 
-  {% if user.is_authenticated %}
+  {% if visitor_account %}
+    <div class="action-grid">
+      <a class="action-card" href="{% url 'visitors:dashboard' %}">
+        <span class="action-icon action-icon-green">
+          <svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>
+        </span>
+        <span class="action-body">
+          <strong>My visits</strong>
+          <small>See your visit history</small>
+        </span>
+        <svg class="icon action-arrow" aria-hidden="true"><use href="#i-arrow-right"/></svg>
+      </a>
+
+      <a class="action-card" href="{% url 'visitors:profile' %}">
+        <span class="action-icon action-icon-blue">
+          <svg class="icon" aria-hidden="true"><use href="#i-user"/></svg>
+        </span>
+        <span class="action-body">
+          <strong>My profile</strong>
+          <small>Update your details and password</small>
+        </span>
+        <svg class="icon action-arrow" aria-hidden="true"><use href="#i-arrow-right"/></svg>
+      </a>
+    </div>
+    <p class="hint home-hint">Signed in as {{ visitor_account.name }}. Visit logging is performed by authorized staff accounts.</p>
+  {% elif user.is_authenticated %}
     <div class="action-grid">
       <a class="action-card" href="{% url 'visits:kiosk' %}">
         <span class="action-icon action-icon-green">
@@ -87,19 +112,35 @@
       </a>
     </div>
   {% else %}
+    <!-- ✅ Two cards stacked vertically, both using .action-card-single -->
     <div class="action-grid action-grid-single">
+
+      <!-- Register button — green accent, same card style as Sign in -->
+      <a class="action-card action-card-single" href="{% url 'visitors:visitor_register' %}">
+        <span class="action-icon action-icon-green">
+          <svg class="icon" aria-hidden="true"><use href="#i-user-plus"/></svg>
+        </span>
+        <span class="action-body">
+          <strong>Create account</strong>
+          <small>Track your own visits and profile</small>
+        </span>
+        <svg class="icon action-arrow" aria-hidden="true"><use href="#i-arrow-right"/></svg>
+      </a>
+
+      <!-- Sign in button — blue accent (existing) -->
       <a class="action-card action-card-single" href="{% url 'accounts:login' %}">
         <span class="action-icon action-icon-blue">
           <svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg>
         </span>
         <span class="action-body">
           <strong>Sign in</strong>
-          <small>Front desk operators and ITMSO administrators</small>
+          <small>Front desk operators, ITMSO administrators and Visitors</small>
         </span>
         <svg class="icon action-arrow" aria-hidden="true"><use href="#i-arrow-right"/></svg>
       </a>
+
     </div>
-    <p class="hint home-hint">Visitor registration and visit logging are performed by authorized staff accounts.</p>
+    <p class="hint home-hint">Visitors can create an account to follow their own visit history. Visit logging and staff accounts stay with authorized ITMSO personnel.</p>
   {% endif %}
 </section>
 

@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}My visits · VisitraITMSO{% endblock %}
+{% block page_class %}page-wide{% endblock %}
+
+{% block content %}
+<section class="screen-head">
+  <div>
+    <a class="back-link" href="{% url 'home' %}">
+      <svg class="icon" aria-hidden="true"><use href="#i-back"/></svg>
+      Home
+    </a>
+    <p class="eyebrow">Visitor account</p>
+    <h1>{{ visitor.name }}</h1>
+    <p class="muted">{{ visitor.type_label }}{% if visitor.identifier %} · {{ visitor.identifier_label }} {{ visitor.identifier }}{% endif %}</p>
+  </div>
+  <div class="head-actions">
+    <a class="btn btn-ghost" href="{% url 'visitors:profile' %}">
+      <svg class="icon" aria-hidden="true"><use href="#i-user"/></svg>
+      My profile
+    </a>
+    <a class="btn btn-ghost" href="{% url 'visitors:password_change' %}">
+      <svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg>
+      Password
+    </a>
+    <form method="post" action="{% url 'visitors:logout' %}" class="inline-form"
+          data-confirm="Sign out of your visitor account?">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-ghost">
+        <svg class="icon" aria-hidden="true"><use href="#i-logout"/></svg>
+        Sign out
+      </button>
+    </form>
+  </div>
+</section>
+
+<section class="card profile-card" aria-labelledby="account-title">
+  <div class="profile-head">
+    <span class="person-avatar">{{ visitor.name|slice:":1"|upper }}</span>
+    <div>
+      <h2 id="account-title">{{ visitor.name }}</h2>
+      <span class="badge badge-green">Account active</span>
+    </div>
+  </div>
+
+  <dl class="profile-grid">
+    <div><dt>Visitor type</dt><dd>{{ visitor.type_label }}</dd></div>
+    <div><dt>{{ visitor.identifier_label }}</dt><dd>{{ visitor.identifier|default:"—" }}</dd></div>
+    <div><dt>Email</dt><dd>{{ visitor.email|default:"—" }}</dd></div>
+    {% if visitor.visitor_type == "STUDENT" %}
+      <div><dt>Student level</dt><dd>{{ visitor.get_student_type_display|default:"—" }}</dd></div>
+      <div><dt>Course</dt><dd>{{ visitor.course|default:"—" }}</dd></div>
+      <div><dt>Year / grade</dt><dd>{{ visitor.year_level|default:"—" }}</dd></div>
+    {% elif visitor.visitor_type == "FACULTY" %}
+      <div><dt>Department</dt><dd>{{ visitor.department|default:"—" }}</dd></div>
+    {% elif visitor.visitor_type == "EXTERNAL" %}
+      <div><dt>Organization</dt><dd>{{ visitor.organization|default:"—" }}</dd></div>
+      <div><dt>Contact number</dt><dd>{{ visitor.contact_number|default:"—" }}</dd></div>
+    {% endif %}
+  </dl>
+</section>
+
+<section class="history-section" aria-labelledby="history-title">
+  <div class="records-head">
+    <h2 id="history-title">
+      My visits
+      <span class="muted">({{ total_visits }})</span>
+    </h2>
+  </div>
+
+  {% if recent_visits %}
+    <div class="history-list">
+      {% for visit in recent_visits %}
+        <article class="card history-item {% if visit.is_active %}history-active{% endif %}">
+          <div class="history-main">
+            <div class="history-purpose">
+              <strong>{{ visit.display_purpose }}</strong>
+              <span class="badge {% if visit.is_active %}badge-green{% else %}badge-amber{% endif %}">
+                {{ visit.status_label }}
+              </span>
+            </div>
+            <div class="record-times">
+              <span><small>Time in</small><strong>{{ visit.time_in|date:"M d, Y h:i A" }}</strong></span>
+              <span><small>Time out</small><strong>{% if visit.time_out %}{{ visit.time_out|date:"M d, Y h:i A" }}{% else %}—{% endif %}</strong></span>
+              <span><small>Duration</small><strong>{{ visit.duration_label }}</strong></span>
+            </div>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+    {% if total_visits > recent_visits|length %}
+      <p class="hint">Showing your {{ recent_visits|length }} most recent visits.</p>
+    {% endif %}
+  {% else %}
+    <div class="card empty-state">
+      <svg class="icon empty-icon" aria-hidden="true"><use href="#i-clock"/></svg>
+      <h2>No visits yet</h2>
+      <p class="muted">When front-desk staff log your visit, it will appear here.</p>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

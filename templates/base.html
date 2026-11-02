@@ -37,7 +37,36 @@
           <svg class="icon" aria-hidden="true"><use href="#i-home"/></svg>
           <span>Home</span>
         </a>
-        {% if user.is_authenticated %}
+        {% if visitor_account %}
+          <a class="nav-link{% if match.namespace == 'visitors' and match.url_name == 'dashboard' %} is-active{% endif %}"
+             href="{% url 'visitors:dashboard' %}"{% if match.namespace == 'visitors' and match.url_name == 'dashboard' %} aria-current="page"{% endif %}>
+            <svg class="icon" aria-hidden="true"><use href="#i-dashboard"/></svg>
+            <span>My visits</span>
+          </a>
+          <a class="nav-link{% if match.namespace == 'visitors' and match.url_name == 'profile' %} is-active{% endif %}"
+             href="{% url 'visitors:profile' %}"{% if match.namespace == 'visitors' and match.url_name == 'profile' %} aria-current="page"{% endif %}>
+            <svg class="icon" aria-hidden="true"><use href="#i-user"/></svg>
+            <span>My profile</span>
+          </a>
+
+          <span class="nav-divider" aria-hidden="true"></span>
+
+          <span class="nav-user" title="{{ visitor_account.email }}">
+            <span class="avatar">{{ visitor_account.name|slice:":1"|upper }}</span>
+            <span class="nav-user-text">
+              <strong class="nav-user-name">{{ visitor_account.name }}</strong>
+              <small>Visitor</small>
+            </span>
+          </span>
+          <form method="post" action="{% url 'visitors:logout' %}" class="inline-form nav-form"
+                data-confirm="Sign out of your visitor account?">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-ghost btn-sm nav-signout">
+              <svg class="icon" aria-hidden="true"><use href="#i-logout"/></svg>
+              Sign out
+            </button>
+          </form>
+        {% elif user.is_authenticated %}
           <a class="nav-link{% if match.namespace == 'visits' %} is-active{% endif %}"
              href="{% url 'visits:kiosk' %}"{% if match.namespace == 'visits' %} aria-current="page"{% endif %}>
             <svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>
@@ -70,7 +99,8 @@
               <small>{{ user.get_role_display }}</small>
             </span>
           </span>
-          <form method="post" action="{% url 'accounts:logout' %}" class="inline-form nav-form">
+          <form method="post" action="{% url 'accounts:logout' %}" class="inline-form nav-form"
+                data-confirm="Sign out of VisitraITMSO?">
             {% csrf_token %}
             <button type="submit" class="btn btn-ghost btn-sm nav-signout">
               <svg class="icon" aria-hidden="true"><use href="#i-logout"/></svg>
@@ -78,6 +108,10 @@
             </button>
           </form>
         {% else %}
+          <a class="btn btn-ghost btn-sm nav-cta" href="{% url 'visitors:visitor_register' %}">
+            <svg class="icon" aria-hidden="true"><use href="#i-user-plus"/></svg>
+            Create account
+          </a>
           <a class="btn btn-primary btn-sm nav-cta" href="{% url 'accounts:login' %}">
             <svg class="icon" aria-hidden="true"><use href="#i-user"/></svg>
             Sign in

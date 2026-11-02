@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Visitor sign in · VisitraITMSO{% endblock %}
+{% block page_class %}page-auth{% endblock %}
+
+{% block content %}
+<section class="auth-card card">
+  <a class="back-link" href="{% url 'home' %}">
+    <svg class="icon" aria-hidden="true"><use href="#i-back"/></svg>
+    Back to home
+  </a>
+
+  <div class="auth-brand">
+    <span class="auth-mark">
+      <img src="{% static 'img/itmso_logo.png' %}" alt="ITMSO logo" width="48" height="48">
+    </span>
+    <div>
+      <strong>VISITRA · ITMSO</strong>
+      <small>Visitor self-service</small>
+    </div>
+  </div>
+
+  <h1>Visitor sign in</h1>
+  <p class="muted">Sign in to view your visit history and keep your profile up to date.</p>
+
+  {% if form.non_field_errors %}
+    <div class="alert alert-error" role="alert">
+      <svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg>
+      <div>{% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}</div>
+    </div>
+  {% endif %}
+
+  <form method="post" class="stack" novalidate>
+    {% csrf_token %}
+    {% include "partials/field.html" with field=form.email %}
+    {% include "partials/field.html" with field=form.password %}
+    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+
+    <label class="checkline">
+      {{ form.remember_me }}
+      <span>{{ form.remember_me.label }}</span>
+    </label>
+
+    <button type="submit" class="btn btn-primary btn-block">
+      <svg class="icon" aria-hidden="true"><use href="#i-user"/></svg>
+      Sign in as visitor
+    </button>
+  </form>
+
+  <p class="auth-note">
+    Don't have an account? <a href="{% url 'visitors:visitor_register' %}">Register here</a>.
+    <br>Staff or administrator? <a href="{% url 'accounts:login' %}">Use the staff sign-in</a>.
+  </p>
+</section>
+{% endblock %}

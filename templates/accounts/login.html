@@ -17,34 +17,119 @@
     </span>
     <div>
       <strong>VISITRA · ITMSO</strong>
-      <small>Staff and administrator access</small>
+      <small>Secure Access Portal</small>
     </div>
   </div>
 
-  <h1>Sign in</h1>
-  <p class="muted">Use your ITMSO account. Administrators open the visit dashboard; front-desk staff open the kiosk.</p>
-
-  {% if form.non_field_errors %}
-    <div class="alert alert-error" role="alert">
-      <svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg>
-      <div>{% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}</div>
-    </div>
-  {% endif %}
-
-  <form method="post" class="stack" novalidate>
-    {% csrf_token %}
-    {% include "partials/field.html" with field=form.username %}
-    {% include "partials/field.html" with field=form.password %}
-    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
-    <button type="submit" class="btn btn-primary btn-block">
-      <svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg>
-      Sign in
+  <!-- Role Selection Tabs -->
+  <div class="segmented" role="tablist" style="margin-bottom: 20px;">
+    <button type="button" class="segment is-active" id="tab-staff" onclick="switchLoginTab('staff')" role="tab" aria-selected="true" aria-controls="panel-staff">
+      Staff / Admin
     </button>
-  </form>
+    <button type="button" class="segment" id="tab-visitor" onclick="switchLoginTab('visitor')" role="tab" aria-selected="false" aria-controls="panel-visitor">
+      Visitor
+    </button>
+  </div>
 
-  <p class="auth-note">
-    Accounts are issued by the ITMSO administrator. Visitor records never contain
-    login credentials.
-  </p>
+  <!-- STAFF LOGIN PANEL -->
+  <div id="panel-staff" role="tabpanel" aria-labelledby="tab-staff">
+    <h1>Staff Sign In</h1>
+    <p class="muted">Use your ITMSO account. Administrators open the visit dashboard; front-desk staff open the kiosk.</p>
+
+    {% if form.non_field_errors %}
+      <div class="alert alert-error" role="alert">
+        <svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg>
+        <div>{% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}</div>
+      </div>
+    {% endif %}
+
+    <form method="post" class="stack" novalidate>
+      {% csrf_token %}
+      {% include "partials/field.html" with field=form.username %}
+      {% include "partials/field.html" with field=form.password %}
+      {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+      
+      <button type="submit" class="btn btn-primary btn-block">
+        <svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg>
+        Sign in as Staff
+      </button>
+    </form>
+
+    <p class="auth-note">
+      Accounts are issued by the ITMSO administrator. 
+      <br>Not a staff member? <a href="#" onclick="switchLoginTab('visitor'); return false;">Sign in as a Visitor</a>
+    </p>
+  </div>
+
+  <!-- VISITOR LOGIN PANEL (Hidden by default) -->
+  <div id="panel-visitor" role="tabpanel" aria-labelledby="tab-visitor" hidden>
+    <h1>Visitor Sign In</h1>
+    <p class="muted">Sign in to view your visit history and manage appointments.</p>
+
+    <!-- Note: This form submits to the visitor login URL defined in visitors/urls.py -->
+    <form action="{% url 'visitors:login' %}" method="post" class="stack" novalidate>
+      {% csrf_token %}
+      
+      <div class="field">
+        <label for="visitor-email" class="label">Email Address</label>
+        <input type="email" name="email" id="visitor-email" class="input" placeholder="you@example.com" required autocomplete="email">
+      </div>
+
+      <div class="field">
+        <label for="visitor-password" class="label">Password</label>
+        <input type="password" name="password" id="visitor-password" class="input" placeholder="Enter your password" required autocomplete="current-password">
+      </div>
+
+      <div class="checkline" style="margin: 12px 0;">
+        <input type="checkbox" name="remember_me" id="visitor-remember" class="checkbox">
+        <label for="visitor-remember">Remember me</label>
+      </div>
+
+      {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+      
+      <button type="submit" class="btn btn-primary btn-block">
+        <svg class="icon" aria-hidden="true"><use href="#i-user"/></svg>
+        Sign in as Visitor
+      </button>
+    </form>
+
+    <p class="auth-note">
+      Don't have an account? 
+      <a href="{% url 'visitors:visitor_register' %}">Register here</a>
+      <br>Are you staff? <a href="#" onclick="switchLoginTab('staff'); return false;">Sign in as Staff</a>
+    </p>
+  </div>
+
 </section>
+
+<script>
+  function switchLoginTab(role) {
+    const staffPanel = document.getElementById('panel-staff');
+    const visitorPanel = document.getElementById('panel-visitor');
+    const staffTab = document.getElementById('tab-staff');
+    const visitorTab = document.getElementById('tab-visitor');
+
+    if (role === 'staff') {
+      // Show Staff
+      staffPanel.hidden = false;
+      visitorPanel.hidden = true;
+      
+      // Update Tab Styles
+      staffTab.classList.add('is-active');
+      staffTab.setAttribute('aria-selected', 'true');
+      visitorTab.classList.remove('is-active');
+      visitorTab.setAttribute('aria-selected', 'false');
+    } else {
+      // Show Visitor
+      staffPanel.hidden = true;
+      visitorPanel.hidden = false;
+      
+      // Update Tab Styles
+      visitorTab.classList.add('is-active');
+      visitorTab.setAttribute('aria-selected', 'true');
+      staffTab.classList.remove('is-active');
+      staffTab.setAttribute('aria-selected', 'false');
+    }
+  }
+</script>
 {% endblock %}

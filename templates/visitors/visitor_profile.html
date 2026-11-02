@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}My profile · VisitraITMSO{% endblock %}
+{% block page_class %}page-narrow{% endblock %}
+
+{% block content %}
+<section class="screen-head">
+  <div>
+    <a class="back-link" href="{% url 'visitors:dashboard' %}">
+      <svg class="icon" aria-hidden="true"><use href="#i-back"/></svg>
+      My visits
+    </a>
+    <p class="eyebrow">Visitor account</p>
+    <h1>My profile</h1>
+    <p class="muted">Keep your contact details current so the front desk can reach you.</p>
+  </div>
+</section>
+
+<form method="post" class="form-layout" novalidate>
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div class="alert alert-error" role="alert">
+      <svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg>
+      <div>{% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}</div>
+    </div>
+  {% endif %}
+
+  <section class="card form-section">
+    <h2 class="card-title"><span class="card-step" aria-hidden="true">1</span>Account</h2>
+    <div class="form-grid">
+      {% include "partials/field.html" with field=form.name %}
+      {% include "partials/field.html" with field=form.email %}
+      {% include "partials/field.html" with field=form.phone_number %}
+    </div>
+  </section>
+
+  <section class="card form-section">
+    <h2 class="card-title"><span class="card-step" aria-hidden="true">2</span>Identity</h2>
+    <div class="form-grid">
+      {% include "partials/field.html" with field=form.identifier %}
+    </div>
+  </section>
+
+  {% if visitor.visitor_type == "STUDENT" %}
+    <section class="card form-section">
+      <h2 class="card-title"><span class="card-step" aria-hidden="true">3</span>Student details</h2>
+      <div class="form-grid">
+        {% include "partials/field.html" with field=form.student_type %}
+        {% include "partials/field.html" with field=form.course %}
+        {% include "partials/field.html" with field=form.year_level %}
+      </div>
+    </section>
+  {% elif visitor.visitor_type == "FACULTY" %}
+    <section class="card form-section">
+      <h2 class="card-title"><span class="card-step" aria-hidden="true">3</span>Faculty details</h2>
+      <div class="form-grid">
+        {% include "partials/field.html" with field=form.department %}
+      </div>
+    </section>
+  {% else %}
+    <section class="card form-section">
+      <h2 class="card-title"><span class="card-step" aria-hidden="true">3</span>External visitor details</h2>
+      <div class="form-grid">
+        {% include "partials/field.html" with field=form.organization %}
+        {% include "partials/field.html" with field=form.contact_number %}
+      </div>
+    </section>
+  {% endif %}
+
+  <div class="form-actions">
+    <a class="btn btn-ghost" href="{% url 'visitors:dashboard' %}">Cancel</a>
+    <button type="submit" class="btn btn-primary">
+      <svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>
+      Save changes
+    </button>
+  </div>
+</form>
+{% endblock %}

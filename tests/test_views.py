@@ -397,7 +397,7 @@ def test_dashboard_is_readable_by_staff(client, staff_user, visit):
     assert response.status_code == 200
     assert b"Maria Santos" in response.content
     assert b"MS 365 Assistance" in response.content
-    assert b"Export" not in response.content
+    assert b"Export" in response.content
 
 
 @pytest.mark.django_db
@@ -471,10 +471,30 @@ def test_inactive_staff_cannot_use_kiosk_apis(client, staff_user, student, purpo
 
 
 @pytest.mark.django_db
-def test_staff_cannot_export_or_delete(client, staff_user, visit):
+def test_staff_export_is_limited_to_today(client, staff_user, student, faculty, purpose):
+    VisitService(clock=FixedClock(manila(2026, 3, 9, 9, 0))).time_in(
+        visitor=student,
+        purpose=purpose,
+    )
+    VisitService().time_in(visitor=faculty, purpose=purpose)
+
+    client.force_login(staff_user)
+    # A requested date range is ignored for staff, just like the dashboard.
+    response = client.get(
+        reverse("reports:export"),
+        {"format": "csv", "date_from": "2000-01-01"},
+    )
+    body = b"".join(response.streaming_content).decode("utf-8-sig")
+
+    assert response.status_code == 200
+    assert "Dr. Juan Dela Cruz" in body
+    assert "Maria Santos" not in body
+
+
+@pytest.mark.django_db
+def test_staff_cannot_delete(client, staff_user, visit):
     client.force_login(staff_user)
 
-    assert client.get(reverse("reports:export"), {"format": "csv"}).status_code == 403
     assert client.post(reverse("reports:delete", kwargs={"pk": visit.pk})).status_code == 403
     assert Visit.objects.visible().filter(pk=visit.pk).exists()
 

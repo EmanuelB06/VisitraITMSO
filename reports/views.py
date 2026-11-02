@@ -26,6 +26,19 @@ from .exporters.factory import get_exporter
 PAGE_SIZE = 20
 
 
+def scoped_filters(user, requested: VisitFilter) -> VisitFilter:
+    """Apply the same history rules to the dashboard and its exports.
+
+    Front-desk staff see the current local day only. Date filters are ignored
+    rather than trusted, so history cannot be requested by URL through either
+    the dashboard or the export endpoint.
+    """
+    if can_view_full_history(user):
+        return requested
+    today = timezone.localdate()
+    return replace(requested, date_from=today, date_to=today)
+
+
 class DashboardView(StaffRequiredMixin, TemplateView):
     template_name = "reports/dashboard.html"
 
@@ -33,17 +46,14 @@ class DashboardView(StaffRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         requested = VisitFilter.from_query(self.request.GET)
         full_history = can_view_full_history(self.request.user)
+        filters = scoped_filters(self.request.user, requested)
 
         if full_history:
-            filters = requested
             # The admin summary stays global, matching the historical view.
             summary = VisitSelector.summary()
             has_filters = requested.is_filtered
         else:
-            # Front-desk staff see the current local day only. Date filters are
-            # ignored rather than trusted, so history cannot be requested by URL.
             today = timezone.localdate()
-            filters = replace(requested, date_from=today, date_to=today)
             summary = VisitSelector.summary(date_from=today, date_to=today)
             has_filters = bool(
                 requested.search
@@ -82,9 +92,9 @@ class DeleteVisitView(AdminRequiredMixin, View):
         return redirect(f"{target}?{query}" if query else target)
 
 
-class ExportView(AdminRequiredMixin, View):
+class ExportView(StaffRequiredMixin, View):
     def get(self, request):
-        filters = VisitFilter.from_query(request.GET)
+        filters = scoped_filters(request.user, VisitFilter.from_query(request.GET))
         try:
             exporter = get_exporter(request.GET.get("format"))
         except UnknownFormatError as exc:

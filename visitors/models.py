@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from django.db import models
 from django.db.models import Q
+from django.db.models.functions import Lower
+from django.contrib.auth.hashers import make_password, check_password
 
 from core.models import TimeStampedModel, UUIDModel
 
@@ -18,6 +20,13 @@ class VisitorQuerySet(models.QuerySet):
         if not term:
             return self
         return self.filter(Q(name__icontains=term) | Q(identifier__icontains=term))
+
+    def by_email(self, email: str):
+        """Match an email address regardless of case (empty emails never match)."""
+        email = (email or "").strip()
+        if not email:
+            return self.none()
+        return self.filter(email__iexact=email)
 
 
 class Visitor(UUIDModel, TimeStampedModel):
@@ -60,6 +69,32 @@ class Visitor(UUIDModel, TimeStampedModel):
 
     is_active = models.BooleanField(default=True)
 
+    # NEW: Visitor login credentials
+    email = models.EmailField(
+        blank=True,
+        db_index=True,
+        help_text="Email address for visitor account login.",
+    )
+    password_hash = models.CharField(
+        max_length=128,
+        blank=True,
+        help_text="Hashed password for visitor authentication.",
+    )
+    phone_number = models.CharField(
+        max_length=30,
+        blank=True,
+        help_text="Phone number for verification and notifications.",
+    )
+    is_verified = models.BooleanField(
+        default=False,
+        help_text="Whether the visitor has verified their email address.",
+    )
+    last_login = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Last time this visitor logged in.",
+    )
+
     objects = VisitorQuerySet.as_manager()
 
     class Meta:
@@ -69,9 +104,16 @@ class Visitor(UUIDModel, TimeStampedModel):
                 fields=["visitor_type", "identifier"],
                 condition=~Q(identifier=""),
                 name="unique_visitor_identifier_per_type",
-            )
+            ),
+            models.UniqueConstraint(
+                Lower("email"),
+                condition=~Q(email=""),
+                name="unique_visitor_email_ci",
+            ),
         ]
-        indexes = [models.Index(fields=["visitor_type", "name"])]
+        indexes = [
+            models.Index(fields=["visitor_type", "name"]),
+        ]
 
     def __str__(self) -> str:
         return f"{self.name} ({self.identifier or 'external'})"
@@ -91,3 +133,34 @@ class Visitor(UUIDModel, TimeStampedModel):
         from .policies import get_policy
 
         return get_policy(self.visitor_type).detail_line(self)
+
+    # NEW: Password management methods
+    def set_password(self, raw_password: str) -> None:
+        """Set the visitor's password."""
+        if raw_password:
+            self.password_hash = make_password(raw_password)
+        else:
+            self.password_hash = ""
+
+    def check_password(self, raw_password: str) -> bool:
+        """Check if the provided password matches the stored hash."""
+        if not self.password_hash:
+            return False
+        return check_password(raw_password, self.password_hash)
+
+    @property
+    def has_login_credentials(self) -> bool:
+        """Check if visitor has email and password set up."""
+        return bool(self.email and self.password_hash)
+
+    @property
+    def can_login(self) -> bool:
+        """Check if visitor can log in (has credentials, is active, and verified)."""
+        return self.is_active and self.has_login_credentials and self.is_verified
+
+    def record_login(self) -> None:
+        """Update last login timestamp."""
+        from django.utils import timezone
+        
+        self.last_login = timezone.now()
+        self.save(update_fields=["last_login"])

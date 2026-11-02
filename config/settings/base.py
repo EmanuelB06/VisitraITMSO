@@ -72,6 +72,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "accounts.context_processors.visitra_capabilities",
+                "visitors.context_processors.visitor_account",
             ],
         },
     },

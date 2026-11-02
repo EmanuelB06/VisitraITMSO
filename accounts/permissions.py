@@ -34,7 +34,7 @@ def can_view_full_history(user) -> bool:
 
 
 def can_export_reports(user) -> bool:
-    return is_admin(user)
+    return is_staff_member(user)
 
 
 def can_delete_visits(user) -> bool:

@@ -13,6 +13,9 @@ full history with counters, filters, search, exports, and soft-delete.
 ## Features
 
 - **Visitor registration** for students, faculty, and external visitors.
+- **Visitor self-service accounts**: visitors can create their own email/password
+  account, sign in, review their visit history, and edit their profile. Staff
+  registration and staff/admin sign-in are unchanged.
 - Type-aware fields and rules (student ID, employee ID, generated external reference).
 - **Reusable QR check-in**: every visitor gets a unique signed QR code, with a
   camera-based scanner in the kiosk and a complete per-visitor visit history.
@@ -21,9 +24,10 @@ full history with counters, filters, search, exports, and soft-delete.
 - **Dashboard** with total / active / completed counters, search by name, ID,
   or purpose, status and visitor-type filters. Staff see today only; admins can
   also filter by date range and browse full history.
-- **Exports**: CSV, PDF (print-ready), and XLSX (formatted workbook), admin-only.
-- **Roles**: staff can register, log visits, and read today's dashboard; admins
-  can also view history, export, delete records, manage purposes/users, read the
+- **Exports**: CSV, PDF (print-ready), and XLSX (formatted workbook); staff can
+  export today's records, admins can export any filtered range.
+- **Roles**: staff can register, log visits, read and export today's dashboard;
+  admins can also view history, delete records, manage purposes/users, read the
   audit trail, and use Django admin.
 - **Audit trail** of sign-ins, failed sign-ins, registrations, time in/out,
   deletions, exports, and access/role changes.
@@ -41,7 +45,7 @@ templates as `caps`.
 | Register visitors, lookup, time in/out | Yes | Yes |
 | Dashboard: today's records | Yes | Yes |
 | Dashboard: full history and date filters | No | Yes |
-| Export CSV / PDF / XLSX | No | Yes |
+| Export CSV / PDF / XLSX | Today only | Any range |
 | Soft-delete records | No | Yes |
 | Manage purposes and users | No | Yes |
 | View audit trail | No | Yes |
@@ -115,13 +119,19 @@ sort order, active flag, and whether the visitor must specify a concern).
 | URL | Access | Purpose |
 |-----|--------|---------|
 | `/` | Public | Landing page and staff sign-in link |
-| `/accounts/login/` | Public | Staff authentication |
+| `/accounts/login/` | Public | Staff/admin authentication (visitor tab included) |
+| `/visitors/visitor-register/` | Public | Visitor self-registration (email + password) |
+| `/visitors/visitor-login/` | Public | Visitor sign-in |
+| `/visitors/visitor-dashboard/` | Visitor | Signed-in visitor's profile summary and visit history |
+| `/visitors/visitor-profile/` | Visitor | Update the signed-in visitor's own profile |
+| `/visitors/visitor-password/` | Visitor | Change the signed-in visitor's password |
+| `/visitors/visitor-logout/` | Visitor | Sign out (POST only) |
 | `/visitors/register/` | Staff | Create a visitor record |
 | `/visitors/<uuid>/` | Staff | Visitor profile, QR badge, and full visit history |
 | `/visitors/<uuid>/qr.svg` | Staff | Download/print the visitor's QR code |
 | `/visits/` | Staff | Kiosk: lookup, QR scan, time in, time out |
 | `/dashboard/` | Staff | Today's counters, filters, and records (admins see all history) |
-| `/dashboard/export/?format=csv\|pdf\|xlsx` | Admin | Download a filtered report |
+| `/dashboard/export/?format=csv\|pdf\|xlsx` | Staff | Download a filtered report (staff: today only) |
 | `/dashboard/<uuid>/delete/` | Admin | Soft-delete a visit |
 | `/admin/` | Admin | Admin panel (users, purposes, visitors, visits, audit log) |
 | `/django-admin/` | Admin | Django admin (model-level users, visitors, purposes, API tokens, audit log) |
@@ -191,8 +201,8 @@ invalidates every printed QR code, so reprint badges if that key is changed.
 1. Register a first-time visitor under `/visitors/register/`.
 2. After saving, the visitor profile opens automatically with a highlighted QR
    badge and the prompt to photograph it. Ask the visitor to take a photo of the
-   on-screen QR; no visitor account or login is involved. Staff can also print
-   the badge.
+   on-screen QR; QR check-in itself needs no visitor account. Staff can also
+   print the badge.
 3. On the kiosk, click **Scan QR**, allow camera access, and hold the visitor's
    QR photo or printed badge in the frame.
 4. The scanner resolves the visitor and fills the kiosk card. Choose a purpose
@@ -206,6 +216,19 @@ one-active-visit, duplicate-purpose-per-day, and purpose rules.
 Camera access requires HTTPS in production (or `http://localhost` during
 development). If the device has no camera or the user denies permission, normal
 visitor lookup still works.
+
+### Visitor accounts
+
+Visitors can register themselves at `/visitors/visitor-register/` and sign in at
+`/visitors/visitor-login/`. Self-registered accounts are usable immediately
+because this project has no email-delivery flow. Passwords are stored as Django
+hashes on the relational `Visitor` row; credentials are deliberately SQL-only,
+while Firestore stays the system of record for visitor profiles and visits.
+
+A visitor session is separate from Django's staff session, so signing in as a
+visitor never grants staff capabilities. Visitors only see their own dashboard,
+profile, and visit history. Staff can still register visitors without accounts at
+`/visitors/register/`.
 
 ---
 
@@ -275,8 +298,10 @@ exactly as before; repositories are bypassed.
 
 ## Exports
 
-The dashboard shows export links only to administrators. The currently applied
-filters are passed to the exporter, so the downloaded file matches the screen.
+The dashboard shows export links to staff and administrators. The currently
+applied filters are passed to the exporter, so the downloaded file matches the
+screen. Staff are always scoped to the current local day; admin exports can
+cover any date range.
 
 | Format | Details |
 |--------|---------|
