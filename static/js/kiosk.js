@@ -79,7 +79,168 @@ if (bootstrapElement) {
     frame: null,
     active: false,
     busy: false,
+    deviceId: null,
+    label: "",
   };
+
+  // Desktop Chrome has no "environment" camera, and its default pick is often
+  // an IR (Windows Hello) or virtual camera that streams nothing but black.
+  const CAMERA_REJECT = /(infrared|\bir\b|windows hello|virtual|obs|snap camera|manycam|droidcam|epoccam|xsplit|ndi)/i;
+  const CAMERA_PREFER = /(back|rear|environment|usb|webcam|camera)/i;
+
+  async function cameraCandidates() {
+    const fallback = [{ deviceId: null, label: "Default camera" }];
+    if (!navigator.mediaDevices?.enumerateDevices) return fallback;
+
+    try {
+      const devices = (await navigator.mediaDevices.enumerateDevices()).filter(
+        (device) => device.kind === "videoinput" && device.deviceId,
+      );
+      // Labels stay empty until camera permission has been granted once.
+      const labelled = devices.filter((device) => device.label);
+      if (!labelled.length) return fallback;
+
+      const usable = labelled.filter((device) => !CAMERA_REJECT.test(device.label));
+      const pool = usable.length ? usable : labelled;
+      pool.sort(
+        (a, b) =>
+          Number(CAMERA_PREFER.test(b.label)) - Number(CAMERA_PREFER.test(a.label)),
+      );
+
+      const candidates = pool.map((device) => ({
+        deviceId: device.deviceId,
+        label: device.label,
+      }));
+      const saved = candidates.find((candidate) => candidate.deviceId === scanner.deviceId);
+      if (saved) {
+        candidates.splice(candidates.indexOf(saved), 1);
+        candidates.unshift(saved);
+      }
+      return candidates;
+    } catch {
+      return fallback;
+    }
+  }
+
+  function waitForFrames(timeout = 2000) {
+    return new Promise((resolve) => {
+      if (scannerVideo.videoWidth > 0) {
+        resolve(true);
+        return;
+      }
+
+      function finish() {
+        scannerVideo.removeEventListener("loadeddata", check);
+        scannerVideo.removeEventListener("playing", check);
+        clearTimeout(timer);
+        resolve(scannerVideo.videoWidth > 0);
+      }
+
+      function check() {
+        if (scannerVideo.videoWidth > 0) finish();
+      }
+
+      const timer = setTimeout(finish, timeout);
+      scannerVideo.addEventListener("loadeddata", check);
+      scannerVideo.addEventListener("playing", check);
+    });
+  }
+
+  async function openCamera(deviceId) {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: deviceId
+        ? { deviceId: { exact: deviceId } }
+        : { facingMode: { ideal: "environment" } },
+      audio: false,
+    });
+    scannerVideo.srcObject = stream;
+
+    try {
+      await scannerVideo.play();
+    } catch {
+      /* A rejected play() still shows up as a missing frame below. */
+    }
+
+    if (await waitForFrames()) return stream;
+
+    stream.getTracks().forEach((track) => track.stop());
+    scannerVideo.srcObject = null;
+    return null;
+  }
+
+  async function startScanner() {
+    if (!scannerSupported()) {
+      toast("Camera scanning is not supported in this browser. Use visitor lookup instead.", "warning");
+      return;
+    }
+
+    scannerOverlay.hidden = false;
+    scannerRetry.hidden = true;
+    scannerStatus.textContent = "Starting camera…";
+    scannerHint.textContent = "Allow camera access when prompted.";
+
+    try {
+      let stream = null;
+
+      for (const candidate of await cameraCandidates()) {
+        try {
+          stream = await openCamera(candidate.deviceId);
+        } catch (error) {
+          if (error?.name === "NotAllowedError" || error?.name === "NotFoundError") {
+            throw error;
+          }
+          stream = null; // Unusable device: fall through to the next camera.
+        }
+        if (stream) {
+          scanner.deviceId = candidate.deviceId;
+          scanner.label = candidate.label;
+          break;
+        }
+      }
+
+      if (!stream) {
+        throw Object.assign(new Error("No camera produced a video signal."), {
+          name: "NoVideo",
+        });
+      }
+
+      scanner.stream = stream;
+      scanner.active = true;
+      scanner.busy = false;
+      scannerStatus.textContent = "Point the camera at the visitor's QR code.";
+      scannerHint.textContent = scanner.label
+        ? `Using ${scanner.label}. Hold the QR code inside the frame.`
+        : "Hold the QR code inside the frame.";
+      scanFrame();
+    } catch (error) {
+      stopScannerStream();
+      scannerHint.textContent =
+        error?.name === "NotAllowedError"
+          ? "Camera permission was denied. Allow access or use visitor lookup instead."
+          : error?.name === "NoVideo" ||
+              error?.name === "NotReadableError" ||
+              error?.name === "OverconstrainedError"
+            ? "This camera is not sending a picture. Close other camera apps, then scan again."
+            : "No usable camera was found. Use visitor lookup instead.";
+      scannerStatus.textContent = "Camera unavailable.";
+      scannerRetry.hidden = false;
+    }
+  }
+
+  function retryScanner() {
+    scannerRetry.hidden = true;
+    if (scanner.stream) {
+      scannerStatus.textContent = "Point the camera at the visitor's QR code.";
+      scannerHint.textContent = scanner.label
+        ? `Using ${scanner.label}. Hold the QR code inside the frame.`
+        : "Hold the QR code inside the frame.";
+      scanner.busy = false;
+      scanner.active = true;
+      scanFrame();
+      return;
+    }
+    startScanner();
+  }
 
   /* ------------------------------------------------------------
      Visitor type tabs
@@ -438,53 +599,6 @@ if (bootstrapElement) {
     }
 
     scanner.frame = requestAnimationFrame(scanFrame);
-  }
-
-  async function startScanner() {
-    if (!scannerSupported()) {
-      toast("Camera scanning is not supported in this browser. Use visitor lookup instead.", "warning");
-      return;
-    }
-
-    scannerOverlay.hidden = false;
-    scannerRetry.hidden = true;
-    scannerStatus.textContent = "Starting camera…";
-    scannerHint.textContent = "Allow camera access when prompted.";
-
-    try {
-      scanner.stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" } },
-        audio: false,
-      });
-      scannerVideo.srcObject = scanner.stream;
-      await scannerVideo.play();
-      scanner.active = true;
-      scanner.busy = false;
-      scannerStatus.textContent = "Point the camera at the visitor's QR code.";
-      scannerHint.textContent = "Hold the QR code inside the frame.";
-      scanFrame();
-    } catch (error) {
-      stopScannerStream();
-      scannerHint.textContent =
-        error?.name === "NotAllowedError"
-          ? "Camera permission was denied. Allow access or use visitor lookup instead."
-          : "No usable camera was found. Use visitor lookup instead.";
-      scannerStatus.textContent = "Camera unavailable.";
-      scannerRetry.hidden = false;
-    }
-  }
-
-  function retryScanner() {
-    scannerRetry.hidden = true;
-    if (scanner.stream) {
-      scannerStatus.textContent = "Point the camera at the visitor's QR code.";
-      scannerHint.textContent = "Hold the QR code inside the frame.";
-      scanner.busy = false;
-      scanner.active = true;
-      scanFrame();
-      return;
-    }
-    startScanner();
   }
 
   scanButton?.addEventListener("click", startScanner);
